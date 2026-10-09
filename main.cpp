@@ -48,7 +48,7 @@ void RestartMenu()
 }
 
 // -----------------------------
-// Callbacks (Aligned to exact base type parameters)
+// Callbacks (Aligned to version 0.9.x types)
 // -----------------------------
 void OnResolutionChanged(ConfigItemMultipleValues* item, uint32_t newValue)
 {
@@ -65,9 +65,9 @@ void OnRestartToggled(ConfigItemBoolean* item, bool value)
 }
 
 // -----------------------------
-// Menu Generator Function
+// Menu Setup Hook
 // -----------------------------
-WUPSConfigCategory openMenuCallback(void) {
+WUPSConfigCategory GetConfigCategory() {
     // 1. Fetch current hardware settings
     __SYSAppGetInteger("/config/system/display/resolution", &currentResolution);
 
@@ -104,17 +104,12 @@ WUPSConfigCategory openMenuCallback(void) {
 }
 
 // -----------------------------
-// Native Configuration Macro Mapping
-// -----------------------------
-// This binds our callback function into the core framework layout registry safely
-WUPS_CONFIG_BUTTONS(openMenuCallback);
-
-// -----------------------------
-// Plugin Lifecycle Hooks 
+// Native Plugin Lifecycle Hooks 
 // -----------------------------
 INITIALIZE_PLUGIN()
 {
-    // Native framework initialization
+    // On WUPS 0.9.x, initialization uses a standard global assignment 
+    // or register statement targeting the configuration callback structure.
 }
 
 DEINITIALIZE_PLUGIN()
