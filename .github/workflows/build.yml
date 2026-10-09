@@ -1,0 +1,40 @@
+name: Build Wii U Plugin
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+jobs:
+  build_plugin:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/wiiu-env/devkitppc:latest
+
+    steps:
+      - name: Checkout Repository Code
+        uses: actions/checkout@v4
+
+      - name: Install Wii U Development Environment Dependencies
+        run: |
+          dkp-pacman -Syu --noconfirm
+          dkp-pacman -S --noconfirm wiiu-dev
+
+      - name: Fetch and Install WUPS Framework
+        run: |
+          git clone https://github.com
+          cd WiiUPluginSystem
+          PATH=/opt/devkitpro/devkitPPC/bin:$PATH DEVKITPRO=/opt/devkitpro make install
+
+      - name: Compile Plugin via Makefile
+        run: |
+          PATH=/opt/devkitpro/devkitPPC/bin:$PATH DEVKITPRO=/opt/devkitpro make clean
+          PATH=/opt/devkitpro/devkitPPC/bin:$PATH DEVKITPRO=/opt/devkitpro make
+
+      - name: Upload Finished Compiled WPS Binary Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: QuickResolution-Plugin
+          path: ./*.wps
