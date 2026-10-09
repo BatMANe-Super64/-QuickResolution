@@ -17,15 +17,16 @@ CXX := $(DEVKITPPC)/bin/powerpc-eabi-g++
 SRC := main.cpp
 OBJ := $(SRC:.cpp=.o)
 
-# Global Toolchain Header Bindings
+# Global Toolchain Header Bindings (Restored explicit sysapp paths)
 CFLAGS := -std=gnu++20 -O2 -mcpu=powerpc -meabi -mhard-float \
           -I$(DEVKITPRO)/wut/include \
+          -I$(DEVKITPRO)/wut/include/sysapp \
           -I$(DEVKITPRO)/wups/include
 
 # Library Linking Parameters
 LDFLAGS := -L$(DEVKITPRO)/wut/lib \
            -L$(DEVKITPRO)/wups/lib \
-           -lwups -lwut -lcoreinit -lsysapp -lc -lgcc
+           -lwups -lwut -lcoreinit -lsysapp -lc -lgcc -lstdc++
 
 # -----------------------------
 # Compilation Rules
