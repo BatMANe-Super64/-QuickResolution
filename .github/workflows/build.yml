@@ -5,27 +5,39 @@ on:
     branches: [ "main", "master" ]
   pull_request:
     branches: [ "main", "master" ]
-  workflow_dispatch: # Allows you to manually click a button on GitHub to trigger a build
+  workflow_dispatch:
 
 jobs:
   build_plugin:
     runs-on: ubuntu-latest
-    # Uses the official standard environment pre-configured with wut and WUPS
+    # Using the primary devkitPPC environment container which supports GitHub workflows cleanly
     container:
-      image: ghcr.io/wiiu-env/wiiupluginsystem:latest
+      image: ghcr.io/wiiu-env/devkitppc:latest
 
     steps:
       # Step 1: Pull your custom source code into the cloud machine
       - name: Checkout Repository Code
         uses: actions/checkout@v4
 
-      # Step 2: Run the Makefile compilation inside the container environment
+      # Step 2: Install the required Wii U dev dependencies via pacman
+      - name: Install Wii U Development Environment Dependencies
+        run: |
+          dkp-pacman -Syu --noconfirm
+          dkp-pacman -S --noconfirm wiiu-dev
+
+      # Step 3: Fetch pre-compiled WUPS headers and libraries straight into the runner paths
+      - name: Fetch and Install WUPS Framework
+        run: |
+          git clone https://github.com
+          cd WiiUPluginSystem
+          PATH=/opt/devkitpro/devkitPPC/bin:$PATH DEVKITPRO=/opt/devkitpro make install
+
+      # Step 4: Run the Makefile to compile your source code into a Wii U plugin executable
       - name: Compile Plugin via Makefile
         run: |
-          make clean
-          make
+          PATH=/opt/devkitpro/devkitPPC/bin:$PATH DEVKITPRO=/opt/devkitpro make
 
-      # Step 3: Package the finished output file so you can download it via your browser
+      # Step 5: Package the finished output file so you can download it via your browser
       - name: Upload Finished Compiled WPS Binary Artifact
         uses: actions/upload-artifact@v4
         with:
