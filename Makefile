@@ -35,7 +35,7 @@ all: $(WPS)
 
 # Convert the raw executable ELF into an Aroma-loadable .wps plugin using the absolute path
 $(WPS): $(TARGET)
-	/opt/devkitpro/wups/bin/wups-elf2wps $(TARGET) --output $(WPS)
+	wups-elf2wps $(TARGET) --output $(WPS)
 
 # Link intermediate binaries
 $(TARGET): $(OBJ)
