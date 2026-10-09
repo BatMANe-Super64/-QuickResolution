@@ -25,16 +25,12 @@ jobs:
           export DEVKITPRO="/opt/devkitpro"
           make install
           
-          # Force compile the host packaging tool natively inside its source folder
-          cd wups-elf2wps
-          make
-          # Copy the finished utility binary straight into the main workspace root
-          cp wups-elf2wps ../../
+          # Force link the extracted utility into the global system bin folder
+          ln -sf /opt/devkitpro/wups/bin/wups-elf2wps /usr/bin/wups-elf2wps
 
       - name: Compile Plugin via Makefile
         run: |
-          # Add the main workspace root directory explicitly into the active PATH search
-          export PATH="$PWD:/opt/devkitpro/devkitPPC/bin:$PATH"
+          export PATH="/opt/devkitpro/devkitPPC/bin:$PATH"
           export DEVKITPRO="/opt/devkitpro"
           make clean
           make
