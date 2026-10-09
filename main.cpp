@@ -48,15 +48,15 @@ void RestartMenu()
 }
 
 // -----------------------------
-// Callbacks
+// Callbacks (Using the explicit required WUPS base types)
 // -----------------------------
-void OnResolutionChanged(WUPSConfigItemMultipleValues* item, int32_t newValue)
+void OnResolutionChanged(ConfigItemMultipleValues* item, uint32_t newValue)
 {
     (void)item; 
     SetResolution(newValue);
 }
 
-void OnRestartToggled(WUPSConfigItemBoolean* item, bool value)
+void OnRestartToggled(ConfigItemBoolean* item, bool value)
 {
     (void)item; 
     if (value) {
@@ -65,14 +65,14 @@ void OnRestartToggled(WUPSConfigItemBoolean* item, bool value)
 }
 
 // -----------------------------
-// Standard WUPS Configuration System Callback
+// Native WUPS Configuration Item Callback Registration
 // -----------------------------
-static WUPSConfigCategory openMenuCallback(void) {
+WUPS_GET_CONFIG_ITEMS(menuItems) {
     // 1. Fetch current display settings
     __SYSAppGetInteger("/config/system/display/resolution", &currentResolution);
 
     // 2. Locate starting resolution index position
-    uint32_t initialIndex = 1; 
+    int initialIndex = 1; 
     for (size_t i = 0; i < resolutionOptions.size(); ++i) {
         if (resolutionOptions[i].value == currentResolution) {
             initialIndex = i;
@@ -80,27 +80,23 @@ static WUPSConfigCategory openMenuCallback(void) {
         }
     }
 
-    // 3. Construct category tree manually (Universal fallback compatibility)
-    WUPSConfigCategory category = WUPSConfigCategory::Create("Quick Resolution Settings");
-
-    category.Add(WUPSConfigItemMultipleValues::CreateFromIndex(
-        std::optional<std::string>("resolution"),
+    // 3. Directly feed the items into the tracking array vector using version-compliant parameters
+    menuItems.push_back(new WUPSConfigItemMultipleValues(WUPSConfigItemMultipleValues::CreateFromIndex(
+        std::optional<const std::string>("resolution"),
         "Display Resolution",
         initialIndex, 
         initialIndex, 
         std::span<const WUPSConfigItemMultipleValues::ValuePair>(resolutionOptions.data(), resolutionOptions.size()),
         OnResolutionChanged
-    ));
+    )));
 
-    category.Add(WUPSConfigItemBoolean::Create(
-        std::optional<std::string>("restart_menu"),
+    menuItems.push_back(new WUPSConfigItemBoolean(WUPSConfigItemBoolean::Create(
+        std::optional<const std::string>("restart_menu"),
         "Restart System Menu (Apply)",
         false, 
         false, 
         OnRestartToggled
-    ));
-
-    return category;
+    )));
 }
 
 // -----------------------------
@@ -108,11 +104,10 @@ static WUPSConfigCategory openMenuCallback(void) {
 // -----------------------------
 INITIALIZE_PLUGIN()
 {
-    // Register the layout generation callback directly into the runtime core
-    WUPS_RegisterConfigCallback(openMenuCallback);
+    // Native framework initialization
 }
 
 DEINITIALIZE_PLUGIN()
 {
-    // Runtime cleanup hook
+    // Native framework cleanup
 }
