@@ -3,8 +3,6 @@
 #include <wups/config/WUPSConfigItemMultipleValues.h>
 #include <wups/config/WUPSConfigItemBoolean.h>
 
-#include <coreinit/systeminfo.h>
-#include <coreinit/launch.h>
 #include <string>
 #include <vector>
 #include <optional>
@@ -17,7 +15,7 @@ WUPS_PLUGIN_AUTHOR("Super64");
 WUPS_PLUGIN_LICENSE("GPL");
 
 // -----------------------------
-// Global plugin state
+// Global plugin state & CoreInit Linking
 // -----------------------------
 extern "C" {
     int32_t __SYSAppGetInteger(const char* path, int32_t* value);
@@ -67,12 +65,14 @@ void OnRestartToggled(WUPSConfigItemBoolean* item, bool value)
 }
 
 // -----------------------------
-// Plugin initialization & Configuration registration
+// Standard WUPS Configuration System Callback
 // -----------------------------
-WUPS_GET_CONFIG_ITEMS(menuItems) {
+static WUPSConfigCategory openMenuCallback(void) {
+    // 1. Fetch current display settings
     __SYSAppGetInteger("/config/system/display/resolution", &currentResolution);
 
-    uint32_t initialIndex = 1; // Default to 720p index
+    // 2. Locate starting resolution index position
+    uint32_t initialIndex = 1; 
     for (size_t i = 0; i < resolutionOptions.size(); ++i) {
         if (resolutionOptions[i].value == currentResolution) {
             initialIndex = i;
@@ -80,30 +80,39 @@ WUPS_GET_CONFIG_ITEMS(menuItems) {
         }
     }
 
-    menuItems.push_back(new WUPSConfigItemMultipleValues(WUPSConfigItemMultipleValues::CreateFromIndex(
+    // 3. Construct category tree manually (Universal fallback compatibility)
+    WUPSConfigCategory category = WUPSConfigCategory::Create("Quick Resolution Settings");
+
+    category.Add(WUPSConfigItemMultipleValues::CreateFromIndex(
         std::optional<std::string>("resolution"),
         "Display Resolution",
         initialIndex, 
         initialIndex, 
         std::span<const WUPSConfigItemMultipleValues::ValuePair>(resolutionOptions.data(), resolutionOptions.size()),
         OnResolutionChanged
-    )));
+    ));
 
-    menuItems.push_back(new WUPSConfigItemBoolean(WUPSConfigItemBoolean::Create(
+    category.Add(WUPSConfigItemBoolean::Create(
         std::optional<std::string>("restart_menu"),
         "Restart System Menu (Apply)",
         false, 
         false, 
         OnRestartToggled
-    )));
+    ));
+
+    return category;
 }
 
+// -----------------------------
+// Plugin Lifecycle Hooks
+// -----------------------------
 INITIALIZE_PLUGIN()
 {
-    // Runtime registration point
+    // Register the layout generation callback directly into the runtime core
+    WUPS_RegisterConfigCallback(openMenuCallback);
 }
 
 DEINITIALIZE_PLUGIN()
 {
-    // Clean up point
+    // Runtime cleanup hook
 }
