@@ -33,9 +33,9 @@ LDFLAGS := -r -L$(DEVKITPRO)/wut/lib \
 # -----------------------------
 all: $(WPS)
 
-# Fixed: Redirects the packaging command to the downloaded workspace tool path
+# Convert the raw executable ELF into an Aroma-loadable .wps plugin
 $(WPS): $(TARGET)
-	./WiiUPluginSystem/wups-elf2wps/wups-elf2wps $(TARGET) --output $(WPS) || wups-elf2wps $(TARGET) --output $(WPS)
+	wups-elf2wps $(TARGET) --output $(WPS)
 
 # Link intermediate binaries
 $(TARGET): $(OBJ)
