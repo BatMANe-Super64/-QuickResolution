@@ -33,9 +33,9 @@ LDFLAGS := -r -L$(DEVKITPRO)/wut/lib \
 # -----------------------------
 all: $(WPS)
 
-# Convert the raw executable ELF into an Aroma-loadable .wps plugin
+# Convert the raw executable ELF into an Aroma-loadable .wps plugin using the absolute path
 $(WPS): $(TARGET)
-	wups-elf2wps $(TARGET) --output $(WPS)
+	/opt/devkitpro/wups/bin/wups-elf2wps $(TARGET) --output $(WPS)
 
 # Link intermediate binaries
 $(TARGET): $(OBJ)
