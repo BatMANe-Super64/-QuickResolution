@@ -17,17 +17,6 @@ jobs:
       - name: Checkout Repository Code
         uses: actions/checkout@v4
 
-      - name: Fetch and Install WUPS Framework Locally
-        run: |
-          git clone https://github.com/wiiu-env/WiiUPluginSystem.git
-          cd WiiUPluginSystem
-          export PATH="/opt/devkitpro/devkitPPC/bin:$PATH"
-          export DEVKITPRO="/opt/devkitpro"
-          make install
-          
-          # Force link the extracted utility into the global system bin folder
-          ln -sf /opt/devkitpro/wups/bin/wups-elf2wps /usr/bin/wups-elf2wps
-
       - name: Compile Plugin via Makefile
         run: |
           export PATH="/opt/devkitpro/devkitPPC/bin:$PATH"
