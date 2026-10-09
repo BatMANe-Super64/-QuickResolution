@@ -17,21 +17,22 @@ jobs:
       - name: Checkout Repository Code
         uses: actions/checkout@v4
 
-      - name: Fetch and Install WUPS Framework
+      - name: Fetch and Compile WUPS Toolchain Natively
         run: |
           git clone https://github.com/wiiu-env/WiiUPluginSystem.git
-          cd WiiUPluginSystem
-          PATH=/opt/devkitpro/devkitPPC/bin:$PATH DEVKITPRO=/opt/devkitpro make install
+          cd WiiUPluginSystem/wups-elf2wps
+          make
 
       - name: Compile Plugin via Makefile
         run: |
-          # Added the temporary compiled tool location straight into the system PATH
-          export PATH="$PWD/WiiUPluginSystem/wups-elf2wps:$PATH"
           export PATH="/opt/devkitpro/devkitPPC/bin:$PATH"
           export DEVKITPRO="/opt/devkitpro"
-          
           make clean
-          make
+          make QuickResolution.elf
+
+      - name: Package ELF into WPS Plugin Binary
+        run: |
+          ./WiiUPluginSystem/wups-elf2wps/wups-elf2wps QuickResolution.elf --output QuickResolution.wps
 
       - name: Upload Finished Compiled WPS Binary Artifact
         uses: actions/upload-artifact@v4
