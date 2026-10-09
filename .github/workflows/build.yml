@@ -24,7 +24,7 @@ jobs:
 
       - name: Fetch and Install WUPS Framework
         run: |
-          git clone https://github.com
+          git clone https://github.com/wiiu-env/WiiUPluginSystem.git
           cd WiiUPluginSystem
           PATH=/opt/devkitpro/devkitPPC/bin:$PATH DEVKITPRO=/opt/devkitpro make install
 
