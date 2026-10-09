@@ -26,7 +26,7 @@ CFLAGS := -std=gnu++20 -O2 -mcpu=powerpc -meabi -mhard-float \
 # Library Linking Parameters
 LDFLAGS := -L$(DEVKITPRO)/wut/lib \
            -L$(DEVKITPRO)/wups/lib \
-           -lwups -lwut -lcoreinit -lsysapp -lc -lgcc -lstdc++
+           -lwups -lwut -lc -lgcc -lstdc++
 
 # -----------------------------
 # Compilation Rules
