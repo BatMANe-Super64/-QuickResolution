@@ -18,7 +18,7 @@ SRC := main.cpp
 OBJ := $(SRC:.cpp=.o)
 
 # Global Toolchain Header Bindings
-CFLAGS := -std=gnu++20 -O2 -mcpu=powerpc -meabi -mhard-float \
+CFLAGS := -std=gnu++20 -O2 -mcpu=powerpc -meabi -mhard-float -fPIC \
           -I$(DEVKITPRO)/wut/include \
           -I$(DEVKITPRO)/wut/include/sysapp \
           -I$(DEVKITPRO)/wups/include
