@@ -17,8 +17,6 @@ jobs:
       - name: Checkout Repository Code
         uses: actions/checkout@v4
 
-      # Removed the blocked dkp-pacman step completely to bypass the server block
-
       - name: Fetch and Install WUPS Framework
         run: |
           git clone https://github.com/wiiu-env/WiiUPluginSystem.git
@@ -27,8 +25,13 @@ jobs:
 
       - name: Compile Plugin via Makefile
         run: |
-          PATH=/opt/devkitpro/devkitPPC/bin:$PATH DEVKITPRO=/opt/devkitpro make clean
-          PATH=/opt/devkitpro/devkitPPC/bin:$PATH DEVKITPRO=/opt/devkitpro make
+          # Added the temporary compiled tool location straight into the system PATH
+          export PATH="$PWD/WiiUPluginSystem/wups-elf2wps:$PATH"
+          export PATH="/opt/devkitpro/devkitPPC/bin:$PATH"
+          export DEVKITPRO="/opt/devkitpro"
+          
+          make clean
+          make
 
       - name: Upload Finished Compiled WPS Binary Artifact
         uses: actions/upload-artifact@v4
