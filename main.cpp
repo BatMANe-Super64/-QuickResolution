@@ -32,14 +32,15 @@ static const std::vector<WUPSConfigItemMultipleValues::ValuePair> resolutionOpti
 void SetResolution(int value)
 {
     currentResolution = value;
-    SYSAppSetInteger("/config/system/display/resolution", value);
-    SYSAppSave();
+    // Call matching coreinit settings architecture hooks
+    __SYSAppSetInteger("/config/system/display/resolution", value);
+    __SYSAppSave();
 }
 
 // Restart system menu application
 void RestartMenu()
 {
-    SYSLaunchMenu();
+    __SYSLaunchMenu();
 }
 
 // -----------------------------
@@ -63,10 +64,10 @@ void OnRestartToggled(WUPSConfigItemBoolean* item, bool value)
 // Plugin initialization & Configuration registration
 // -----------------------------
 WUPS_GET_CONFIG_ITEMS_V2(menuItems) {
-    // 1. Fetch the actual hardware resolution first
-    SYSAppGetInteger("/config/system/display/resolution", &currentResolution);
+    // Fetch the actual hardware resolution using correct coreinit symbols
+    __SYSAppGetInteger("/config/system/display/resolution", &currentResolution);
 
-    // 2. Find the correct matching index in our choices matrix
+    // Find the correct matching index in our choices matrix
     uint32_t initialIndex = 1; // Default to 720p index
     for (size_t i = 0; i < resolutionOptions.size(); ++i) {
         if (resolutionOptions[i].value == currentResolution) {
@@ -75,7 +76,7 @@ WUPS_GET_CONFIG_ITEMS_V2(menuItems) {
         }
     }
 
-    // 3. Populate and return elements dynamically via the matrix array
+    // Populate and return elements dynamically via the matrix array
     menuItems.push_back(new WUPSConfigItemMultipleValues(WUPSConfigItemMultipleValues::CreateFromIndex(
         std::optional<std::string>("resolution"),
         "Display Resolution",
