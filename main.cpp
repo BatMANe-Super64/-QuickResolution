@@ -15,13 +15,13 @@ WUPS_PLUGIN_AUTHOR("Super64");
 WUPS_PLUGIN_LICENSE("GPL");
 
 // -----------------------------
-// CoreInit System Functions Linking
+// CoreInit / SysApp Functions Linking
 // -----------------------------
 extern "C" {
-    int32_t __SYSAppGetInteger(const char* path, int32_t* value);
-    int32_t __SYSAppSetInteger(const char* path, int32_t value);
-    int32_t __SYSAppSave(void);
-    void __SYSLaunchMenu(void);
+    int32_t SYSAppGetInteger(const char* path, int32_t* value);
+    int32_t SYSAppSetInteger(const char* path, int32_t value);
+    int32_t SYSAppSave(void);
+    void SYSLaunchMenu(void);
 }
 
 static int32_t currentResolution = 1;
@@ -37,14 +37,14 @@ static const std::vector<WUPSConfigItemMultipleValues::ValuePair> resolutionOpti
 void SetResolution(int value)
 {
     currentResolution = value;
-    __SYSAppSetInteger("/config/system/display/resolution", value);
-    __SYSAppSave();
+    SYSAppSetInteger("/config/system/display/resolution", value);
+    SYSAppSave();
 }
 
 // Restart system menu application
 void RestartMenu()
 {
-    __SYSLaunchMenu();
+    SYSLaunchMenu();
 }
 
 // -----------------------------
@@ -69,7 +69,7 @@ void OnRestartToggled(ConfigItemBoolean* item, bool value)
 // -----------------------------
 WUPSConfigCategory GetConfigCategory() {
     // 1. Fetch current hardware settings
-    __SYSAppGetInteger("/config/system/display/resolution", &currentResolution);
+    SYSAppGetInteger("/config/system/display/resolution", &currentResolution);
 
     // 2. Locate starting resolution index position
     int initialIndex = 1; 
@@ -108,8 +108,7 @@ WUPSConfigCategory GetConfigCategory() {
 // -----------------------------
 INITIALIZE_PLUGIN()
 {
-    // On WUPS 0.9.x, initialization uses a standard global assignment 
-    // or register statement targeting the configuration callback structure.
+    // Native initialization
 }
 
 DEINITIALIZE_PLUGIN()
