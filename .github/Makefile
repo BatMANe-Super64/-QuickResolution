@@ -1,0 +1,49 @@
+# -----------------------------
+# QuickResolutionPlugin Makefile
+# -----------------------------
+
+TITLE  := QuickResolution
+TARGET := $(TITLE).elf
+WPS    := $(TITLE).wps
+
+# Use the pre-configured paths provided inside the container environment
+DEVKITPRO ?= /opt/devkitpro
+DEVKITPPC := $(DEVKITPRO)/devkitPPC
+
+# Compiler Definition
+CXX := $(DEVKITPPC)/bin/powerpc-eabi-g++
+
+# Source / Object configurations
+SRC := main.cpp
+OBJ := $(SRC:.cpp=.o)
+
+# Global Toolchain Header Bindings
+CFLAGS := -std=gnu++20 -O2 -mcpu=powerpc -meabi -mhard-float \
+          -I$(DEVKITPRO)/wut/include \
+          -I$(DEVKITPRO)/wups/include
+
+# Library Linking Parameters
+LDFLAGS := -L$(DEVKITPRO)/wut/lib \
+           -L$(DEVKITPRO)/wups/lib \
+           -lwups -lwut -lcoreinit -lsysapp -lc -lgcc
+
+# -----------------------------
+# Compilation Rules
+# -----------------------------
+all: $(WPS)
+
+# Automatically convert the raw executable ELF into an Aroma-loadable .wps plugin
+$(WPS): $(TARGET)
+	wups-elf2wps $(TARGET) --output $(WPS)
+
+# Link intermediate binaries
+$(TARGET): $(OBJ)
+	$(CXX) $(OBJ) -o $@ $(LDFLAGS)
+
+# Compile raw source modules
+%.o: %.cpp
+	$(CXX) $(CFLAGS) -x c++ -c $< -o $@
+
+# Purge compilation structures
+clean:
+	rm -f $(OBJ) $(TARGET) $(WPS)
