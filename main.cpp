@@ -3,8 +3,8 @@
 #include <wups/config/WUPSConfigItemMultipleValues.h>
 #include <wups/config/WUPSConfigItemBoolean.h>
 
-#include <sysapp/config.h>   // SYSAppGetInteger / SYSAppSetInteger / SYSAppSave
-#include <sysapp/launch.h>   // SYSLaunchMenu
+#include <coreinit/systeminfo.h> // SYSAppGetInteger / SYSAppSetInteger / SYSAppSave
+#include <coreinit/launch.h>     // SYSLaunchMenu
 #include <string>
 #include <vector>
 #include <optional>
