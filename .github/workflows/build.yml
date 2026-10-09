@@ -24,11 +24,17 @@ jobs:
           export PATH="/opt/devkitpro/devkitPPC/bin:$PATH"
           export DEVKITPRO="/opt/devkitpro"
           make install
+          
+          # Force compile the host packaging tool natively inside its source folder
+          cd wups-elf2wps
+          make
+          # Copy the finished utility binary straight into the main workspace root
+          cp wups-elf2wps ../../
 
       - name: Compile Plugin via Makefile
         run: |
-          # Added the cloned framework's binary folder directly to your active PATH
-          export PATH="$PWD/WiiUPluginSystem/wups-elf2wps:/opt/devkitpro/devkitPPC/bin:$PATH"
+          # Add the main workspace root directory explicitly into the active PATH search
+          export PATH="$PWD:/opt/devkitpro/devkitPPC/bin:$PATH"
           export DEVKITPRO="/opt/devkitpro"
           make clean
           make
