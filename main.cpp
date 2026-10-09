@@ -48,15 +48,15 @@ void RestartMenu()
 }
 
 // -----------------------------
-// Callbacks (Matching WUPS 0.9.x signature rules exactly)
+// Callbacks (Aligned to exact base type parameters)
 // -----------------------------
-void OnResolutionChanged(WUPSConfigItemMultipleValues* item, int32_t newValue)
+void OnResolutionChanged(ConfigItemMultipleValues* item, uint32_t newValue)
 {
     (void)item; 
-    SetResolution(newValue);
+    SetResolution((int)newValue);
 }
 
-void OnRestartToggled(WUPSConfigItemBoolean* item, bool value)
+void OnRestartToggled(ConfigItemBoolean* item, bool value)
 {
     (void)item; 
     if (value) {
@@ -75,7 +75,7 @@ WUPSConfigCategory openMenuCallback(void) {
     int initialIndex = 1; 
     for (size_t i = 0; i < resolutionOptions.size(); ++i) {
         if (resolutionOptions[i].value == currentResolution) {
-            initialIndex = i;
+            initialIndex = (int)i;
             break;
         }
     }
@@ -104,12 +104,17 @@ WUPSConfigCategory openMenuCallback(void) {
 }
 
 // -----------------------------
-// Plugin Lifecycle Hooks (Using the correct initialization syntax)
+// Native Configuration Macro Mapping
+// -----------------------------
+// This binds our callback function into the core framework layout registry safely
+WUPS_CONFIG_BUTTONS(openMenuCallback);
+
+// -----------------------------
+// Plugin Lifecycle Hooks 
 // -----------------------------
 INITIALIZE_PLUGIN()
 {
-    // Binds our menu logic generator directly into the standard 0.9.x registration hook
-    WUPS_RegisterConfigCallback(openMenuCallback);
+    // Native framework initialization
 }
 
 DEINITIALIZE_PLUGIN()
