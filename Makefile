@@ -17,7 +17,7 @@ CXX := $(DEVKITPPC)/bin/powerpc-eabi-g++
 SRC := main.cpp
 OBJ := $(SRC:.cpp=.o)
 
-# Global Toolchain Header Bindings (Restored explicit sysapp paths)
+# Global Toolchain Header Bindings
 CFLAGS := -std=gnu++20 -O2 -mcpu=powerpc -meabi -mhard-float \
           -I$(DEVKITPRO)/wut/include \
           -I$(DEVKITPRO)/wut/include/sysapp \
