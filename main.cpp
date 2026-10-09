@@ -3,8 +3,8 @@
 #include <wups/config/WUPSConfigItemMultipleValues.h>
 #include <wups/config/WUPSConfigItemBoolean.h>
 
-#include <coreinit/systeminfo.h> // Modern reliable fallback for system integers
-#include <coreinit/launch.h>     // Modern reliable fallback for system launch
+#include <coreinit/systeminfo.h>
+#include <coreinit/launch.h>
 #include <string>
 #include <vector>
 #include <optional>
@@ -20,7 +20,6 @@ WUPS_PLUGIN_LICENSE("GPL");
 // Global plugin state
 // -----------------------------
 extern "C" {
-    // Explicitly link against the core OS settings exports inside coreinit
     int32_t __SYSAppGetInteger(const char* path, int32_t* value);
     int32_t __SYSAppSetInteger(const char* path, int32_t value);
     int32_t __SYSAppSave(void);
@@ -70,11 +69,9 @@ void OnRestartToggled(WUPSConfigItemBoolean* item, bool value)
 // -----------------------------
 // Plugin initialization & Configuration registration
 // -----------------------------
-WUPS_GET_CONFIG_ITEMS_V2(menuItems) {
-    // 1. Fetch the actual hardware resolution first
+WUPS_GET_CONFIG_ITEMS(menuItems) {
     __SYSAppGetInteger("/config/system/display/resolution", &currentResolution);
 
-    // 2. Find the correct matching index in our choices matrix
     uint32_t initialIndex = 1; // Default to 720p index
     for (size_t i = 0; i < resolutionOptions.size(); ++i) {
         if (resolutionOptions[i].value == currentResolution) {
@@ -83,28 +80,30 @@ WUPS_GET_CONFIG_ITEMS_V2(menuItems) {
         }
     }
 
-    // 3. Populate and return elements dynamically via the matrix array
-    // Fixed: Passed 6 arguments to match candidate 2 signature requirements
     menuItems.push_back(new WUPSConfigItemMultipleValues(WUPSConfigItemMultipleValues::CreateFromIndex(
         std::optional<std::string>("resolution"),
         "Display Resolution",
-        initialIndex, // initial index
-        initialIndex, // default index
+        initialIndex, 
+        initialIndex, 
         std::span<const WUPSConfigItemMultipleValues::ValuePair>(resolutionOptions.data(), resolutionOptions.size()),
         OnResolutionChanged
     )));
 
-    // Fixed: Passed 5 arguments to match candidate 2 signature requirements
     menuItems.push_back(new WUPSConfigItemBoolean(WUPSConfigItemBoolean::Create(
         std::optional<std::string>("restart_menu"),
         "Restart System Menu (Apply)",
-        false, // initial value
-        false, // default value
+        false, 
+        false, 
         OnRestartToggled
     )));
 }
 
 INITIALIZE_PLUGIN()
 {
-    // Basic runtime registration point
+    // Runtime registration point
+}
+
+DEINITIALIZE_PLUGIN()
+{
+    // Clean up point
 }
