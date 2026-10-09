@@ -1,12 +1,5 @@
 #include <wups.h>
-#include <wups/config.h>
-#include <wups/config/WUPSConfigItemMultipleValues.h>
-#include <wups/config/WUPSConfigItemBoolean.h>
-
-#include <string>
-#include <vector>
-#include <optional>
-#include <span>
+#include <string.h>
 
 WUPS_PLUGIN_NAME("Quick Resolution");
 WUPS_PLUGIN_DESCRIPTION("Quickly change Wii U display resolution");
@@ -15,7 +8,7 @@ WUPS_PLUGIN_AUTHOR("Super64");
 WUPS_PLUGIN_LICENSE("GPL");
 
 // -----------------------------
-// Global plugin state & CoreInit Linking
+// CoreInit System Functions Linking
 // -----------------------------
 extern "C" {
     int32_t __SYSAppGetInteger(const char* path, int32_t* value);
@@ -26,18 +19,24 @@ extern "C" {
 
 static int32_t currentResolution = 1;
 
-// Resolution list mapping
-static const std::vector<WUPSConfigItemMultipleValues::ValuePair> resolutionOptions = {
-    {0, "480p"},
-    {1, "720p"},
-    {3, "1080p"}
+// Resolution text layout choices matching choice index positions
+static const char* resolutionOptions[] = {
+    "480p",
+    "720p",
+    "1080p"
 };
 
 // Set resolution and commit to active system config
 void SetResolution(int value)
 {
-    currentResolution = value;
-    __SYSAppSetInteger("/config/system/display/resolution", value);
+    // Map list index choices back to hardware values (0=480p, 1=720p, 3=1080p)
+    int hardwareValue = 1;
+    if (value == 0) hardwareValue = 0;
+    else if (value == 1) hardwareValue = 1;
+    else if (value == 2) hardwareValue = 3;
+
+    currentResolution = hardwareValue;
+    __SYSAppSetInteger("/config/system/display/resolution", hardwareValue);
     __SYSAppSave();
 }
 
@@ -48,55 +47,42 @@ void RestartMenu()
 }
 
 // -----------------------------
-// Callbacks (Using the explicit required WUPS base types)
+// Classic WUPS Menu Callbacks
 // -----------------------------
-void OnResolutionChanged(ConfigItemMultipleValues* item, uint32_t newValue)
-{
-    (void)item; 
-    SetResolution(newValue);
+static void OnResolutionChanged(WUPSConfigHandle configHandle, const char* categoryId, const char* itemId, WUPSConfigValue newValue, void* user_data) {
+    (void)configHandle; (void)categoryId; (void)itemId; (void)user_data;
+    SetResolution(newValue.integer);
 }
 
-void OnRestartToggled(ConfigItemBoolean* item, bool value)
-{
-    (void)item; 
-    if (value) {
+static void OnRestartToggled(WUPSConfigHandle configHandle, const char* categoryId, const char* itemId, WUPSConfigValue newValue, void* user_data) {
+    (void)configHandle; (void)categoryId; (void)itemId; (void)user_data;
+    if (newValue.boolean) {
         RestartMenu();
     }
 }
 
-// -----------------------------
-// Native WUPS Configuration Item Callback Registration
-// -----------------------------
-WUPS_GET_CONFIG_ITEMS(menuItems) {
-    // 1. Fetch current display settings
+// This runs automatically whenever a user opens your plugin submenu configuration screen
+static void OnMenuOpened(WUPSConfigHandle configHandle, void* user_data) {
+    (void)user_data;
+
+    // 1. Add Category
+    WUPSConfig_AddCategory(configHandle, "resolution_cat", "Quick Resolution Settings");
+
+    // 2. Fetch active hardware setting positions
     __SYSAppGetInteger("/config/system/display/resolution", &currentResolution);
+    
+    int initialIndex = 1; // Fallback default to 720p
+    if (currentResolution == 0) initialIndex = 0;
+    else if (currentResolution == 1) initialIndex = 1;
+    else if (currentResolution == 3) initialIndex = 2;
 
-    // 2. Locate starting resolution index position
-    int initialIndex = 1; 
-    for (size_t i = 0; i < resolutionOptions.size(); ++i) {
-        if (resolutionOptions[i].value == currentResolution) {
-            initialIndex = i;
-            break;
-        }
-    }
+    // 3. Register Dropdown choices
+    WUPSConfig_AddList(configHandle, "resolution_cat", "resolution_item", "Display Resolution", 
+                       initialIndex, resolutionOptions, 3, OnResolutionChanged, NULL);
 
-    // 3. Directly feed the items into the tracking array vector using version-compliant parameters
-    menuItems.push_back(new WUPSConfigItemMultipleValues(WUPSConfigItemMultipleValues::CreateFromIndex(
-        std::optional<const std::string>("resolution"),
-        "Display Resolution",
-        initialIndex, 
-        initialIndex, 
-        std::span<const WUPSConfigItemMultipleValues::ValuePair>(resolutionOptions.data(), resolutionOptions.size()),
-        OnResolutionChanged
-    )));
-
-    menuItems.push_back(new WUPSConfigItemBoolean(WUPSConfigItemBoolean::Create(
-        std::optional<const std::string>("restart_menu"),
-        "Restart System Menu (Apply)",
-        false, 
-        false, 
-        OnRestartToggled
-    )));
+    // 4. Register Reboot Toggle button 
+    WUPSConfig_AddBoolean(configHandle, "resolution_cat", "restart_item", "Restart System Menu (Apply)", 
+                          false, OnRestartToggled, NULL);
 }
 
 // -----------------------------
@@ -104,10 +90,11 @@ WUPS_GET_CONFIG_ITEMS(menuItems) {
 // -----------------------------
 INITIALIZE_PLUGIN()
 {
-    // Native framework initialization
+    // Register our screen generator natively using the classic C-API registration function hook
+    WUPS_RegisterConfigCallback(OnMenuOpened, NULL);
 }
 
 DEINITIALIZE_PLUGIN()
 {
-    // Native framework cleanup
+    // Runtime cleanup
 }
