@@ -3,12 +3,12 @@
 #include <wups/config/WUPSConfigItemMultipleValues.h>
 #include <wups/config/WUPSConfigItemBoolean.h>
 
-#include <sysapp/title.h>    // SYSAppGetInteger / SYSAppSetInteger / SYSAppSave
-#include <sysapp/launch.h>   // SYSLaunchMenu
+#include <coreinit/systeminfo.h> // Modern reliable fallback for system integers
+#include <coreinit/launch.h>     // Modern reliable fallback for system launch
 #include <string>
 #include <vector>
 #include <optional>
-<span>
+#include <span>
 
 WUPS_PLUGIN_NAME("Quick Resolution");
 WUPS_PLUGIN_DESCRIPTION("Quickly change Wii U display resolution");
@@ -19,6 +19,14 @@ WUPS_PLUGIN_LICENSE("GPL");
 // -----------------------------
 // Global plugin state
 // -----------------------------
+extern "C" {
+    // Explicitly link against the core OS settings exports inside coreinit
+    int32_t __SYSAppGetInteger(const char* path, int32_t* value);
+    int32_t __SYSAppSetInteger(const char* path, int32_t value);
+    int32_t __SYSAppSave(void);
+    void __SYSLaunchMenu(void);
+}
+
 static int32_t currentResolution = 1;
 
 // Resolution list mapping
@@ -28,22 +36,18 @@ static const std::vector<WUPSConfigItemMultipleValues::ValuePair> resolutionOpti
     {3, "1080p"}
 };
 
-// Config menu items declared as pointers to avoid initialization racing
-static WUPSConfigItemMultipleValues* resolutionDropdown = nullptr;
-static WUPSConfigItemBoolean* restartButton = nullptr;
-
 // Set resolution and commit to active system config
 void SetResolution(int value)
 {
     currentResolution = value;
-    SYSAppSetInteger("/config/system/display/resolution", value);
-    SYSAppSave();
+    __SYSAppSetInteger("/config/system/display/resolution", value);
+    __SYSAppSave();
 }
 
 // Restart system menu application
 void RestartMenu()
 {
-    SYSLaunchMenu();
+    __SYSLaunchMenu();
 }
 
 // -----------------------------
@@ -64,12 +68,11 @@ void OnRestartToggled(WUPSConfigItemBoolean* item, bool value)
 }
 
 // -----------------------------
-// Plugin initialization
+// Plugin initialization & Configuration registration
 // -----------------------------
-INITIALIZE_PLUGIN()
-{
+WUPS_GET_CONFIG_ITEMS_V2(menuItems) {
     // 1. Fetch the actual hardware resolution first
-    SYSAppGetInteger("/config/system/display/resolution", &currentResolution);
+    __SYSAppGetInteger("/config/system/display/resolution", &currentResolution);
 
     // 2. Find the correct matching index in our choices matrix
     uint32_t initialIndex = 1; // Default to 720p index
@@ -80,25 +83,28 @@ INITIALIZE_PLUGIN()
         }
     }
 
-    // 3. Instantiate the UI components inside runtime initialization scope
-    resolutionDropdown = new WUPSConfigItemMultipleValues(WUPSConfigItemMultipleValues::CreateFromIndex(
+    // 3. Populate and return elements dynamically via the matrix array
+    // Fixed: Passed 6 arguments to match candidate 2 signature requirements
+    menuItems.push_back(new WUPSConfigItemMultipleValues(WUPSConfigItemMultipleValues::CreateFromIndex(
         std::optional<std::string>("resolution"),
         "Display Resolution",
-        initialIndex, 
+        initialIndex, // initial index
+        initialIndex, // default index
         std::span<const WUPSConfigItemMultipleValues::ValuePair>(resolutionOptions.data(), resolutionOptions.size()),
         OnResolutionChanged
-    ));
+    )));
 
-    restartButton = new WUPSConfigItemBoolean(WUPSConfigItemBoolean::Create(
+    // Fixed: Passed 5 arguments to match candidate 2 signature requirements
+    menuItems.push_back(new WUPSConfigItemBoolean(WUPSConfigItemBoolean::Create(
         std::optional<std::string>("restart_menu"),
         "Restart System Menu (Apply)",
-        false,
+        false, // initial value
+        false, // default value
         OnRestartToggled
-    ));
+    )));
 }
 
-// Register configuration pointers to the active tracking matrix
-WUPS_CONFIG_ITEMS_V2(
-    resolutionDropdown,
-    restartButton
-);
+INITIALIZE_PLUGIN()
+{
+    // Basic runtime registration point
+}
