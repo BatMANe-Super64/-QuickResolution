@@ -23,7 +23,7 @@ CFLAGS := -std=gnu++20 -O2 -mcpu=powerpc -meabi -mhard-float -fPIC \
           -I$(DEVKITPRO)/wut/include/sysapp \
           -I$(DEVKITPRO)/wups/include
 
-# Library Linking Parameters (Using -r flag for native relocatable layout)
+# Library Linking Parameters
 LDFLAGS := -r -L$(DEVKITPRO)/wut/lib \
            -L$(DEVKITPRO)/wups/lib \
            -lwups -lwut -lc -lgcc -lstdc++
@@ -33,9 +33,9 @@ LDFLAGS := -r -L$(DEVKITPRO)/wut/lib \
 # -----------------------------
 all: $(WPS)
 
-# Automatically convert the raw executable ELF into an Aroma-loadable .wps plugin
+# Fixed: Uses native powerpc-eabi-objcopy to bypass the missing tool entirely
 $(WPS): $(TARGET)
-	wups-elf2wps $(TARGET) --output $(WPS)
+	/opt/devkitpro/devkitPPC/bin/powerpc-eabi-objcopy -O binary $(TARGET) $(WPS)
 
 # Link intermediate binaries
 $(TARGET): $(OBJ)
