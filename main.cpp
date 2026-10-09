@@ -8,7 +8,7 @@
 #include <string>
 #include <vector>
 #include <optional>
-#include <span >
+#include <span>
 
 WUPS_PLUGIN_NAME("Quick Resolution");
 WUPS_PLUGIN_DESCRIPTION("Quickly change Wii U display resolution");
