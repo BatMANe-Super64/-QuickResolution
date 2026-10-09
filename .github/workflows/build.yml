@@ -27,7 +27,8 @@ jobs:
 
       - name: Compile Plugin via Makefile
         run: |
-          export PATH="/opt/devkitpro/devkitPPC/bin:$PATH"
+          # Added the cloned framework's binary folder directly to your active PATH
+          export PATH="$PWD/WiiUPluginSystem/wups-elf2wps:/opt/devkitpro/devkitPPC/bin:$PATH"
           export DEVKITPRO="/opt/devkitpro"
           make clean
           make
