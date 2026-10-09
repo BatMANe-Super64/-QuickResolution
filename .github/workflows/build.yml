@@ -17,10 +17,7 @@ jobs:
       - name: Checkout Repository Code
         uses: actions/checkout@v4
 
-      - name: Install Wii U Development Environment Dependencies
-        run: |
-          dkp-pacman -Syu --noconfirm
-          dkp-pacman -S --noconfirm wiiu-dev
+      # Removed the blocked dkp-pacman step completely to bypass the server block
 
       - name: Fetch and Install WUPS Framework
         run: |
