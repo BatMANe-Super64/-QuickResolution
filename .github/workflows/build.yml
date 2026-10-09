@@ -1,0 +1,33 @@
+name: Build Wii U Plugin
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+  workflow_dispatch: # Allows you to manually click a button on GitHub to trigger a build
+
+jobs:
+  build_plugin:
+    runs-on: ubuntu-latest
+    # Uses the official standard environment pre-configured with wut and WUPS
+    container:
+      image: ghcr.io/wiiu-env/wiiupluginsystem:latest
+
+    steps:
+      # Step 1: Pull your custom source code into the cloud machine
+      - name: Checkout Repository Code
+        uses: actions/checkout@v4
+
+      # Step 2: Run the Makefile compilation inside the container environment
+      - name: Compile Plugin via Makefile
+        run: |
+          make clean
+          make
+
+      # Step 3: Package the finished output file so you can download it via your browser
+      - name: Upload Finished Compiled WPS Binary Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: QuickResolution-Plugin
+          path: ./*.wps
