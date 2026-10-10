@@ -139,9 +139,13 @@ void ApplyNotificationBackgroundColors()
 
 const char* ResolutionLabel(AVMTvResolution resolution)
 {
-    for (const auto& option : kResolutionOptions)
-        if (option.value == static_cast<uint32_t>(resolution)) return option.label;
-    return "Unknown";
+    switch (resolution)
+    {
+        case AVM_TV_RESOLUTION_480P: return "480p";
+        case AVM_TV_RESOLUTION_720P: return "720p";
+        case AVM_TV_RESOLUTION_1080P: return "1080p";
+        default: return "Unknown";
+    }
 }
 
 void BuildOverlayText(size_t index, char* buffer, size_t size)
@@ -196,6 +200,7 @@ void RefreshResolutionOverlay()
 
 void ShowResolutionOverlay()
 {
+    gSelectedMenuEntry = 1;
     if (!gNotificationReady)
     {
         (void)std::snprintf(gOverlayStatus, sizeof(gOverlayStatus),
