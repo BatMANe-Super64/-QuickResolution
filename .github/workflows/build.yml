@@ -1,31 +1,40 @@
-name: Build Wii U Plugin
+name: Build Wii U Aroma Plugin
 
 on:
   push:
-    branches: [ "main", "master" ]
+    branches: [main, master]
   pull_request:
-    branches: [ "main", "master" ]
+    branches: [main, master]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
-  build_plugin:
+  build:
+    name: Build WUPS plugin
     runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/wiiu-env/devkitppc:latest
+    timeout-minutes: 15
 
     steps:
-      - name: Checkout Repository Code
+      - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Compile Plugin via Makefile
-        run: |
-          export PATH="/opt/devkitpro/devkitPPC/bin:$PATH"
-          export DEVKITPRO="/opt/devkitpro"
-          make clean
-          make
+      - name: Build toolchain image
+        run: docker build --pull -t quickresolution-builder .
 
-      - name: Upload Finished Compiled WPS Binary Artifact
+      - name: Compile plugin
+        run: |
+          docker run --rm -v "$PWD:/project" quickresolution-builder sh -lc '
+            make clean
+            make
+            test -s QuickResolution.wps
+          '
+
+      - name: Upload WPS artifact
         uses: actions/upload-artifact@v4
         with:
           name: QuickResolution-Plugin
-          path: ./*.wps
+          path: QuickResolution.wps
+          if-no-files-found: error
+          compression-level: 0
