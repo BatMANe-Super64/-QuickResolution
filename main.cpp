@@ -1,12 +1,10 @@
 #include <wups.h>
-#include <wups/config/WUPSConfigCategory.h>
+#include <wups/config.h>
 #include <wups/config/WUPSConfigItemMultipleValues.h>
-#include <wups/config/WUPSConfigItemBoolean.h>
 
+#include <cstdint>
+#include <map>
 #include <string>
-#include <vector>
-#include <optional>
-#include <span>
 
 WUPS_PLUGIN_NAME("Quick Resolution");
 WUPS_PLUGIN_DESCRIPTION("Quickly change Wii U display resolution");
@@ -14,104 +12,62 @@ WUPS_PLUGIN_VERSION("1.0");
 WUPS_PLUGIN_AUTHOR("Super64");
 WUPS_PLUGIN_LICENSE("GPL");
 
-// -----------------------------
-// CoreInit / SysApp Functions Linking
-// -----------------------------
-extern "C" {
-    int32_t SYSAppGetInteger(const char* path, int32_t* value);
-    int32_t SYSAppSetInteger(const char* path, int32_t value);
-    int32_t SYSAppSave(void);
-    void SYSLaunchMenu(void);
-}
+namespace {
+    // These are proposed values from the original code.
+    // They are NOT yet verified as valid system resolution values.
+    constexpr int32_t RES_480P  = 0;
+    constexpr int32_t RES_720P  = 1;
+    constexpr int32_t RES_1080P = 3;
 
-static int32_t currentResolution = 1;
+    int32_t selectedResolution = RES_720P;
 
-// Resolution list mapping
-static const std::vector<WUPSConfigItemMultipleValues::ValuePair> resolutionOptions = {
-    {0, "480p"},
-    {1, "720p"},
-    {3, "1080p"}
-};
+    void OnResolutionChanged(
+        WUPSConfigItemMultipleValues* item,
+        int32_t newValue
+    ) {
+        (void)item;
 
-// Set resolution and commit to active system config
-void SetResolution(int value)
-{
-    currentResolution = value;
-    SYSAppSetInteger("/config/system/display/resolution", value);
-    SYSAppSave();
-}
+        switch (newValue) {
+            case RES_480P:
+            case RES_720P:
+            case RES_1080P:
+                selectedResolution = newValue;
+                // System-setting changes will be added after
+                // verifying the correct Wii U API.
+                break;
 
-// Restart system menu application
-void RestartMenu()
-{
-    SYSLaunchMenu();
-}
-
-// -----------------------------
-// Callbacks (Aligned to version 0.9.x types)
-// -----------------------------
-void OnResolutionChanged(ConfigItemMultipleValues* item, uint32_t newValue)
-{
-    (void)item; 
-    SetResolution((int)newValue);
-}
-
-void OnRestartToggled(ConfigItemBoolean* item, bool value)
-{
-    (void)item; 
-    if (value) {
-        RestartMenu();
-    }
-}
-
-// -----------------------------
-// Menu Setup Hook
-// -----------------------------
-WUPSConfigCategory GetConfigCategory() {
-    // 1. Fetch current hardware settings
-    SYSAppGetInteger("/config/system/display/resolution", &currentResolution);
-
-    // 2. Locate starting resolution index position
-    int initialIndex = 1; 
-    for (size_t i = 0; i < resolutionOptions.size(); ++i) {
-        if (resolutionOptions[i].value == currentResolution) {
-            initialIndex = (int)i;
-            break;
+            default:
+                break;
         }
     }
-
-    // 3. Construct category tree manually using lowercase members (.add)
-    WUPSConfigCategory category = WUPSConfigCategory::Create("Quick Resolution Settings");
-
-    category.add(WUPSConfigItemMultipleValues::CreateFromIndex(
-        std::optional<const std::string>("resolution"),
-        "Display Resolution",
-        initialIndex, 
-        initialIndex, 
-        std::span<const WUPSConfigItemMultipleValues::ValuePair>(resolutionOptions.data(), resolutionOptions.size()),
-        OnResolutionChanged
-    ));
-
-    category.add(WUPSConfigItemBoolean::Create(
-        std::optional<const std::string>("restart_menu"),
-        "Restart System Menu (Apply)",
-        false, 
-        false, 
-        OnRestartToggled
-    ));
-
-    return category;
 }
 
-// -----------------------------
-// Native Plugin Lifecycle Hooks 
-// -----------------------------
-INITIALIZE_PLUGIN()
-{
-    // Native initialization
+WUPS_GET_CONFIG() {
+    auto* config = new WUPSConfig("Quick Resolution");
+    auto* category = config->addCategory("Display");
+
+    std::map<int32_t, std::string> resolutions;
+    resolutions[RES_480P]  = "480p";
+    resolutions[RES_720P]  = "720p";
+    resolutions[RES_1080P] = "1080p";
+
+    category->addItem(
+        new WUPSConfigItemMultipleValues(
+            "resolution",
+            "Display Resolution",
+            selectedResolution,
+            resolutions,
+            &OnResolutionChanged
+        )
+    );
+
+    return config;
 }
 
-DEINITIALIZE_PLUGIN()
-{
-    // Cleanup hook
+INITIALIZE_PLUGIN() {
+    // Initialize plugin state here.
+}
+
+DEINITIALIZE_PLUGIN() {
+    // Release plugin resources here.
 }
