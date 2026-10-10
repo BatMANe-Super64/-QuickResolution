@@ -14,21 +14,22 @@ jobs:
   build:
     name: Build WUPS plugin
     runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/wiiu-env/devkitppc:latest
-    timeout-minutes: 10
+    timeout-minutes: 15
 
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Build plugin
+      - name: Build toolchain image
+        run: docker build --pull -t quickresolution-builder .
+
+      - name: Compile plugin
         run: |
-          export DEVKITPRO="${DEVKITPRO:-/opt/devkitpro}"
-          export DEVKITPPC="${DEVKITPPC:-$DEVKITPRO/devkitPPC}"
-          make clean
-          make
-          test -s QuickResolution.wps
+          docker run --rm -v "$PWD:/project" quickresolution-builder sh -lc '
+            make clean
+            make
+            test -s QuickResolution.wps
+          '
 
       - name: Upload WPS artifact
         uses: actions/upload-artifact@v4
