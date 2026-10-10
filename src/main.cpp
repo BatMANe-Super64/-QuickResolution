@@ -149,10 +149,10 @@ void BuildOverlayText(size_t index, char* buffer, size_t size)
         (void)std::snprintf(buffer, size, "Quick Resolution");
     else if (index == 1)
         (void)std::snprintf(buffer, size, "%c Resolution: %s",
-            gSelectedMenuEntry == 2 ? '>' : ' ', ResolutionLabel(gPendingResolution));
+            gSelectedMenuEntry == 1 ? '>' : ' ', ResolutionLabel(gPendingResolution));
     else
         (void)std::snprintf(buffer, size, "%c Apply resolution (restart Menu)",
-            gSelectedMenuEntry == 1 ? '>' : ' ');
+            gSelectedMenuEntry == 2 ? '>' : ' ');
 }
 
 void HideResolutionOverlay()
@@ -228,9 +228,8 @@ void ToggleResolutionOverlay(WUPSButtonCombo_ControllerTypes, WUPSButtonCombo_Co
 void MoveResolutionMenu(int direction)
 {
     if (!gOverlayVisible) return;
-    gSelectedMenuEntry = (gSelectedMenuEntry == 1)
-        ? (direction > 0 ? 2 : 2)
-        : 1;
+    gSelectedMenuEntry = (gSelectedMenuEntry == 1) ? 2 : 1;
+    (void)direction;
     RefreshResolutionOverlay();
 }
 
