@@ -29,7 +29,7 @@ Replace `[ENVIRONMENT]` with the name of your Aroma environment, then launch or 
 
 ## Configuration
 
-Open the Aroma plugin configuration menu and select **Quick Resolution**. Choose a resolution, then use **Restart System Menu (Apply)** to return to the Wii U Menu so the setting can take effect.
+Open the Aroma plugin configuration menu and select **Quick Resolution**. Choose a resolution; this only stages the selection and does not change the system setting yet. To apply it, select **WARNING: Save game first; Apply restarts Menu**. This writes the selected resolution and launches the Wii U Menu.\n\n**Warning:** Applying while a game is running can interrupt gameplay and cause loss of unsaved progress. Save your game first. If the selected mode is not supported by your display setup, the picture may become unusable until you restore a compatible resolution.
 
 ## License
 

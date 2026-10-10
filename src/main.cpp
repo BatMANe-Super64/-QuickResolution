@@ -21,6 +21,7 @@ namespace
 {
 constexpr AVMTvResolution kDefaultResolution = AVM_TV_RESOLUTION_720P;
 AVMTvResolution gCurrentResolution = kDefaultResolution;
+AVMTvResolution gPendingResolution = kDefaultResolution;
 
 constexpr WUPSConfigItemMultipleValues::ValuePair kResolutionOptions[] = {
     {AVM_TV_RESOLUTION_480P, "480p"},
@@ -40,33 +41,41 @@ bool IsSupportedResolution(uint32_t value)
     return false;
 }
 
-// WUT's AVM configuration API writes the system TV resolution setting.
-// A zero return value indicates success.
-void SetResolution(uint32_t value)
+// A zero return value from WUT's AVM API indicates success.
+bool SetResolution(uint32_t value)
 {
     if (!IsSupportedResolution(value))
     {
-        return;
+        return false;
     }
 
     const auto resolution = static_cast<AVMTvResolution>(value);
-    if (AVMWriteSystemVideoResConfig(resolution) == 0)
+    if (AVMWriteSystemVideoResConfig(resolution) != 0)
     {
-        gCurrentResolution = resolution;
+        return false;
     }
+
+    gCurrentResolution = resolution;
+    return true;
 }
 
+// Selecting a resolution only stages it. It does not write the system setting.
 void OnResolutionChanged(ConfigItemMultipleValues* item, uint32_t newValue)
 {
     (void)item;
-    SetResolution(newValue);
+    if (IsSupportedResolution(newValue))
+    {
+        gPendingResolution = static_cast<AVMTvResolution>(newValue);
+    }
 }
 
-void OnRestartToggled(ConfigItemBoolean* item, bool value)
+void OnApplyToggled(ConfigItemBoolean* item, bool value)
 {
     (void)item;
-    if (value)
+    if (value && SetResolution(static_cast<uint32_t>(gPendingResolution)))
     {
+        // Restarting the System Menu while a game is running can interrupt it
+        // and cause loss of unsaved progress. The config label warns users.
         SYSLaunchMenu();
     }
 }
@@ -78,18 +87,18 @@ WUPSConfigAPICallbackStatus ConfigMenuOpenedCallback(WUPSConfigCategoryHandle ro
     {
         root.add(WUPSConfigItemMultipleValues::CreateFromValue(
             std::optional<const std::string>("resolution"),
-            "Display Resolution",
+            "Display Resolution (staged until Apply)",
             static_cast<uint32_t>(kDefaultResolution),
-            static_cast<uint32_t>(gCurrentResolution),
+            static_cast<uint32_t>(gPendingResolution),
             std::span<const WUPSConfigItemMultipleValues::ValuePair>(kResolutionOptions),
             OnResolutionChanged));
 
         root.add(WUPSConfigItemBoolean::Create(
-            std::optional<const std::string>("restart_menu"),
-            "Restart System Menu (Apply)",
+            std::optional<const std::string>("apply_resolution"),
+            "WARNING: Save game first; Apply restarts Menu",
             false,
             false,
-            OnRestartToggled));
+            OnApplyToggled));
     }
     catch (...)
     {
@@ -111,6 +120,7 @@ INITIALIZE_PLUGIN()
     {
         gCurrentResolution = configuredResolution;
     }
+    gPendingResolution = gCurrentResolution;
 
     WUPSConfigAPIOptionsV1 configOptions = {.name = "QuickResolution"};
     (void)WUPSConfigAPI_Init(configOptions, ConfigMenuOpenedCallback, ConfigMenuClosedCallback);
