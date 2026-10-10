@@ -62,6 +62,8 @@ constexpr WUPSConfigItemMultipleValues::ValuePair kResolutionOptions[] = {
     {AVM_TV_RESOLUTION_1080P, "1080p"},
 };
 
+bool SetResolution(uint32_t value);
+
 NMColor QuickResolutionColorForSelection(uint32_t selection) {
     switch (selection) {
         case 0: return NMColor{100, 100, 100, 255}; // Standard Notifications (native styling)
