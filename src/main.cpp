@@ -1,14 +1,15 @@
+#include <avm/config.h>
+#include <avm/tv.h>
 #include <wups.h>
 #include <wups/config/WUPSConfigCategory.h>
 #include <wups/config/WUPSConfigItemBoolean.h>
 #include <wups/config/WUPSConfigItemMultipleValues.h>
 #include <wups/config_api.h>
+#include <sysapp/launch.h>
 
 #include <optional>
 #include <span>
 #include <string>
-
-#include <sysapp/launch.h>
 
 WUPS_PLUGIN_NAME("Quick Resolution");
 WUPS_PLUGIN_DESCRIPTION("Quickly change Wii U display resolution");
@@ -18,29 +19,20 @@ WUPS_PLUGIN_LICENSE("GPL-3.0");
 
 namespace
 {
-constexpr char kResolutionPath[] = "/config/system/display/resolution";
-constexpr int32_t kDefaultResolution = 1;
-
-int32_t gCurrentResolution = kDefaultResolution;
+constexpr AVMTvResolution kDefaultResolution = AVM_TV_RESOLUTION_720P;
+AVMTvResolution gCurrentResolution = kDefaultResolution;
 
 constexpr WUPSConfigItemMultipleValues::ValuePair kResolutionOptions[] = {
-    {0, "480p"},
-    {1, "720p"},
-    {3, "1080p"},
+    {AVM_TV_RESOLUTION_480P, "480p"},
+    {AVM_TV_RESOLUTION_720P, "720p"},
+    {AVM_TV_RESOLUTION_1080P, "1080p"},
 };
 
-extern "C"
-{
-int32_t SYSAppGetInteger(const char* path, int32_t* value);
-int32_t SYSAppSetInteger(const char* path, int32_t value);
-int32_t SYSAppSave(void);
-}
-
-bool IsSupportedResolution(int32_t value)
+bool IsSupportedResolution(uint32_t value)
 {
     for (const auto& option : kResolutionOptions)
     {
-        if (static_cast<int32_t>(option.value) == value)
+        if (option.value == value)
         {
             return true;
         }
@@ -48,24 +40,26 @@ bool IsSupportedResolution(int32_t value)
     return false;
 }
 
-void SetResolution(int32_t value)
+// WUT's AVM configuration API writes the system TV resolution setting.
+// A zero return value indicates success.
+void SetResolution(uint32_t value)
 {
     if (!IsSupportedResolution(value))
     {
         return;
     }
 
-    if (SYSAppSetInteger(kResolutionPath, value) == 0 &&
-        SYSAppSave() == 0)
+    const auto resolution = static_cast<AVMTvResolution>(value);
+    if (AVMWriteSystemVideoResConfig(resolution) == 0)
     {
-        gCurrentResolution = value;
+        gCurrentResolution = resolution;
     }
 }
 
 void OnResolutionChanged(ConfigItemMultipleValues* item, uint32_t newValue)
 {
     (void)item;
-    SetResolution(static_cast<int32_t>(newValue));
+    SetResolution(newValue);
 }
 
 void OnRestartToggled(ConfigItemBoolean* item, bool value)
@@ -85,8 +79,8 @@ WUPSConfigAPICallbackStatus ConfigMenuOpenedCallback(WUPSConfigCategoryHandle ro
         root.add(WUPSConfigItemMultipleValues::CreateFromValue(
             std::optional<const std::string>("resolution"),
             "Display Resolution",
-            kDefaultResolution,
-            gCurrentResolution,
+            static_cast<uint32_t>(kDefaultResolution),
+            static_cast<uint32_t>(gCurrentResolution),
             std::span<const WUPSConfigItemMultipleValues::ValuePair>(kResolutionOptions),
             OnResolutionChanged));
 
@@ -111,9 +105,9 @@ void ConfigMenuClosedCallback()
 
 INITIALIZE_PLUGIN()
 {
-    int32_t configuredResolution = kDefaultResolution;
-    if (SYSAppGetInteger(kResolutionPath, &configuredResolution) == 0 &&
-        IsSupportedResolution(configuredResolution))
+    AVMTvResolution configuredResolution = kDefaultResolution;
+    if (AVMReadSystemVideoResConfig(&configuredResolution) == 0 &&
+        IsSupportedResolution(static_cast<uint32_t>(configuredResolution)))
     {
         gCurrentResolution = configuredResolution;
     }
