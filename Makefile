@@ -1,50 +1,30 @@
-# -----------------------------
-# QuickResolutionPlugin Makefile
-# -----------------------------
+.SUFFIXES:
 
-TITLE  := QuickResolution
-TARGET := $(TITLE).elf
-WPS    := $(TITLE).wps
+ifeq ($(strip $(DEVKITPRO)),)
+$(error "DEVKITPRO is not set")
+endif
 
-# Use the pre-configured paths provided inside the container environment
-DEVKITPRO ?= /opt/devkitpro
-DEVKITPPC := $(DEVKITPRO)/devkitPPC
+include $(DEVKITPRO)/wups/share/wups_rules
 
-# Compiler Definition
-CXX := $(DEVKITPPC)/bin/powerpc-eabi-g++
+WUT_ROOT  := $(DEVKITPRO)/wut
+WUPS_ROOT := $(DEVKITPRO)/wups
 
-# Source / Object configurations
-SRC := main.cpp
-OBJ := $(SRC:.cpp=.o)
+TARGET   := QuickResolution
+BUILD    := build
+SOURCES  := .
+DATA     := data
+INCLUDES := .
 
-# Global Toolchain Header Bindings
-CFLAGS := -std=gnu++20 -O2 -mcpu=powerpc -meabi -mhard-float -fPIC \
-          -I$(DEVKITPRO)/wut/include \
-          -I$(DEVKITPRO)/wut/include/sysapp \
-          -I$(DEVKITPRO)/wups/include
+CFLAGS   := -Wall -Wextra -O2 -ffunction-sections $(MACHDEP)
+CXXFLAGS := $(CFLAGS) -std=gnu++20
+ASFLAGS  := -g $(ARCH)
 
-# Library Linking Parameters
-LDFLAGS := -r -L$(DEVKITPRO)/wut/lib \
-           -L$(DEVKITPRO)/wups/lib \
-           -lwups -lwut -lc -lgcc -lstdc++
+LDFLAGS  = -g $(ARCH) $(RPXSPECS) \
+           -Wl,-Map,$(notdir $*.map) \
+           -T$(WUPS_ROOT)/share/libwupsbackend.ld \
+           $(WUPSSPECS)
 
-# -----------------------------
-# Compilation Rules
-# -----------------------------
-all: $(WPS)
+LIBS    := -lwups -lwut
+LIBDIRS := $(WUPS_ROOT) $(WUT_ROOT)
 
-# Fixed: Uses native powerpc-eabi-objcopy to bypass the missing tool entirely
-$(WPS): $(TARGET)
-	/opt/devkitpro/devkitPPC/bin/powerpc-eabi-objcopy -O binary $(TARGET) $(WPS)
-
-# Link intermediate binaries
-$(TARGET): $(OBJ)
-	$(CXX) $(OBJ) -o $@ $(LDFLAGS)
-
-# Compile raw source modules
-%.o: %.cpp
-	$(CXX) $(CFLAGS) -x c++ -c $< -o $@
-
-# Purge compilation structures
-clean:
-	rm -f $(OBJ) $(TARGET) $(WPS)
+include $(DEVKITPRO)/wups/share/wups_rules
