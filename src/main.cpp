@@ -72,10 +72,17 @@ void OnResolutionChanged(ConfigItemMultipleValues* item, uint32_t newValue)
 void OnApplyToggled(ConfigItemBoolean* item, bool value)
 {
     (void)item;
-    if (value && SetResolution(static_cast<uint32_t>(gPendingResolution)))
+    if (!value)
     {
-        // Restarting the System Menu while a game is running can interrupt it
-        // and cause loss of unsaved progress. The config label warns users.
+        return;
+    }
+
+    // This is a one-shot action, not a saved preference. The item intentionally
+    // has no identifier so the Apply choice is not persisted between sessions.
+    if (SetResolution(static_cast<uint32_t>(gPendingResolution)))
+    {
+        // WUPS calls config item callbacks when the configuration menu closes.
+        // Restarting the System Menu during gameplay can lose unsaved progress.
         SYSLaunchMenu();
     }
 }
@@ -93,12 +100,14 @@ WUPSConfigAPICallbackStatus ConfigMenuOpenedCallback(WUPSConfigCategoryHandle ro
             std::span<const WUPSConfigItemMultipleValues::ValuePair>(kResolutionOptions),
             OnResolutionChanged));
 
-        root.add(WUPSConfigItemBoolean::Create(
-            std::optional<const std::string>("apply_resolution"),
-            "WARNING: Save game first; Apply restarts Menu",
+        root.add(WUPSConfigItemBoolean::CreateEx(
+            std::nullopt,
+            "Apply resolution (save game first; restarts Menu)",
             false,
             false,
-            OnApplyToggled));
+            OnApplyToggled,
+            "APPLY NOW",
+            "Not applying"));
     }
     catch (...)
     {
