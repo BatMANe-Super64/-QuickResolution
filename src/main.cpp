@@ -149,7 +149,7 @@ void BuildOverlayText(size_t index, char* buffer, size_t size)
         (void)std::snprintf(buffer, size, "Quick Resolution");
     else if (index == 1)
         (void)std::snprintf(buffer, size, "%c Resolution: %s",
-            gSelectedMenuEntry == 0 ? '>' : ' ', ResolutionLabel(gPendingResolution));
+            gSelectedMenuEntry == 2 ? '>' : ' ', ResolutionLabel(gPendingResolution));
     else
         (void)std::snprintf(buffer, size, "%c Apply resolution (restart Menu)",
             gSelectedMenuEntry == 1 ? '>' : ' ');
@@ -228,8 +228,9 @@ void ToggleResolutionOverlay(WUPSButtonCombo_ControllerTypes, WUPSButtonCombo_Co
 void MoveResolutionMenu(int direction)
 {
     if (!gOverlayVisible) return;
-    gSelectedMenuEntry = (gSelectedMenuEntry + kMenuEntryCount - 1) % (kMenuEntryCount - 1);
-    if (direction > 0) gSelectedMenuEntry = (gSelectedMenuEntry + 1) % (kMenuEntryCount - 1);
+    gSelectedMenuEntry = (gSelectedMenuEntry == 1)
+        ? (direction > 0 ? 2 : 2)
+        : 1;
     RefreshResolutionOverlay();
 }
 
@@ -245,7 +246,7 @@ void NextMenuEntry(WUPSButtonCombo_ControllerTypes, WUPSButtonCombo_ComboHandle,
 
 void CycleResolution(int direction)
 {
-    if (!gOverlayVisible || gSelectedMenuEntry != 0) return;
+    if (!gOverlayVisible || gSelectedMenuEntry != 1) return;
     size_t current = 0;
     for (size_t i = 0; i < sizeof(kResolutionOptions) / sizeof(kResolutionOptions[0]); ++i)
         if (kResolutionOptions[i].value == static_cast<uint32_t>(gPendingResolution)) current = i;
@@ -274,11 +275,7 @@ bool ApplyPendingResolution()
 void SelectResolutionMenuEntry(WUPSButtonCombo_ControllerTypes, WUPSButtonCombo_ComboHandle, void*)
 {
     if (!gOverlayVisible) return;
-    if (gSelectedMenuEntry == 0)
-    {
-        CycleResolution(1);
-        return;
-    }
+    if (gSelectedMenuEntry != 2) return;
     HideResolutionOverlay();
     gOverlayVisible = false;
     if (ApplyPendingResolution())
@@ -535,7 +532,7 @@ WUPSConfigAPICallbackStatus ConfigMenuOpenedCallback(WUPSConfigCategoryHandle ro
             "APPLY NOW",
             "Not applying"));
 
-        root.add(WUPSConfigItemStub::Create("Overlay controls: TV + ZL toggle; TV + Up/Down select; TV + Left/Right change resolution; TV + A select"));
+        root.add(WUPSConfigItemStub::Create("Overlay controls: TV + ZL toggle; TV + Up/Down select; TV + Left/Right change resolution; TV + A apply when Apply is selected"));
         root.add(WUPSConfigItemMultipleValues::CreateFromValue(
             std::optional<const std::string>(kBackgroundColorStorageId),
             "Background Color", kDefaultBackgroundColor, gBackgroundColorSelection,
