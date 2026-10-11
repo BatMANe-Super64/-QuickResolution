@@ -36,13 +36,14 @@ AVMTvResolution gPendingResolution = kDefaultResolution;
 constexpr uint32_t kDefaultBackgroundColor = 0;
 constexpr uint32_t kBackgroundColorCount = 51;
 constexpr uint32_t kUseGlobalBackgroundColor = kBackgroundColorCount;
-constexpr size_t kMenuEntryCount = 3;
+constexpr size_t kMenuEntryCount = 5;
 constexpr float kNotificationExitStaggerSeconds = 0.04f;
 constexpr char kBackgroundColorStorageId[] = "background_color";
 constexpr char kEntryColorStoragePrefix[] = "entry_color_";
 uint32_t gBackgroundColorSelection = kDefaultBackgroundColor;
 uint32_t gEntryBackgroundColors[kMenuEntryCount] = {
-    kUseGlobalBackgroundColor, kUseGlobalBackgroundColor, kUseGlobalBackgroundColor
+    kUseGlobalBackgroundColor, kUseGlobalBackgroundColor, kUseGlobalBackgroundColor,
+    kUseGlobalBackgroundColor, kUseGlobalBackgroundColor
 };
 WUPSButtonCombo_ComboHandle gToggleCombo = {};
 WUPSButtonCombo_ComboHandle gPreviousCombo = {};
@@ -53,9 +54,7 @@ WUPSButtonCombo_ComboHandle gSelectCombo = {};
 NotificationModuleHandle gNotificationHandles[kMenuEntryCount] = {};
 bool gNotificationReady = false;
 bool gOverlayVisible = false;
-bool gChoosingResolution = false;
 size_t gSelectedMenuEntry = 1;
-size_t gResolutionOptionIndex = 0;
 char gOverlayStatus[96] = "NotificationModule: not initialized";
 
 constexpr WUPSConfigItemMultipleValues::ValuePair kResolutionOptions[] = {
@@ -154,17 +153,24 @@ void BuildOverlayText(size_t index, char* buffer, size_t size)
 {
     if (size == 0) return;
     if (index == 0)
+    {
         (void)std::snprintf(buffer, size, "Quick Resolution");
-    else if (index == 1)
-        (void)std::snprintf(buffer, size, "%c Resolution: %s%s",
-            gChoosingResolution || (!gChoosingResolution && gSelectedMenuEntry == 1) ? '>' : ' ',
-            ResolutionLabel(gChoosingResolution
-                ? static_cast<AVMTvResolution>(kResolutionOptions[gResolutionOptionIndex].value)
-                : gPendingResolution),
-            gChoosingResolution ? " (A: Select)" : " (A: Change)");
-    else
-        (void)std::snprintf(buffer, size, "%c Apply resolution (restart Menu)",
-            !gChoosingResolution && gSelectedMenuEntry == 2 ? '>' : ' ');
+        return;
+    }
+
+    if (index >= 1 && index <= 3)
+    {
+        const AVMTvResolution resolution =
+            static_cast<AVMTvResolution>(kResolutionOptions[index - 1].value);
+        (void)std::snprintf(buffer, size, "%c %s%s",
+            gSelectedMenuEntry == index ? '>' : ' ',
+            ResolutionLabel(resolution),
+            gPendingResolution == resolution ? " [Selected]" : "");
+        return;
+    }
+
+    (void)std::snprintf(buffer, size, "%c Apply resolution (restart Menu)",
+        gSelectedMenuEntry == 4 ? '>' : ' ');
 }
 
 void HideResolutionOverlay()
@@ -207,10 +213,6 @@ void RefreshResolutionOverlay()
 void ShowResolutionOverlay()
 {
     gSelectedMenuEntry = 1;
-    gChoosingResolution = false;
-    for (size_t i = 0; i < sizeof(kResolutionOptions) / sizeof(kResolutionOptions[0]); ++i)
-        if (kResolutionOptions[i].value == static_cast<uint32_t>(gPendingResolution))
-            gResolutionOptionIndex = i;
     if (!gNotificationReady)
     {
         (void)std::snprintf(gOverlayStatus, sizeof(gOverlayStatus),
@@ -226,6 +228,7 @@ void ShowResolutionOverlay()
         if (status != NOTIFICATION_MODULE_RESULT_SUCCESS)
         {
             HideResolutionOverlay();
+            gOverlayVisible = false;
             (void)std::snprintf(gOverlayStatus, sizeof(gOverlayStatus),
                 "Notification failed: %.45s", NotificationModule_GetStatusStr(status));
             return;
@@ -245,16 +248,14 @@ void ToggleResolutionOverlay(WUPSButtonCombo_ControllerTypes, WUPSButtonCombo_Co
 void MoveResolutionMenu(int direction)
 {
     if (!gOverlayVisible) return;
-    if (gChoosingResolution)
-    {
-        const size_t count = sizeof(kResolutionOptions) / sizeof(kResolutionOptions[0]);
-        gResolutionOptionIndex = (gResolutionOptionIndex + count +
-            (direction > 0 ? 1 : count - 1)) % count;
-    }
+    constexpr size_t kFirstSelectableEntry = 1;
+    constexpr size_t kLastSelectableEntry = 4;
+    if (direction > 0)
+        gSelectedMenuEntry = gSelectedMenuEntry >= kLastSelectableEntry
+            ? kFirstSelectableEntry : gSelectedMenuEntry + 1;
     else
-    {
-        gSelectedMenuEntry = (gSelectedMenuEntry == 1) ? 2 : 1;
-    }
+        gSelectedMenuEntry = gSelectedMenuEntry <= kFirstSelectableEntry
+            ? kLastSelectableEntry : gSelectedMenuEntry - 1;
     RefreshResolutionOverlay();
 }
 
@@ -268,24 +269,6 @@ void NextMenuEntry(WUPSButtonCombo_ControllerTypes, WUPSButtonCombo_ComboHandle,
     MoveResolutionMenu(1);
 }
 
-void CycleResolution(int direction)
-{
-    if (!gOverlayVisible || !gChoosingResolution) return;
-    const size_t count = sizeof(kResolutionOptions) / sizeof(kResolutionOptions[0]);
-    gResolutionOptionIndex = (gResolutionOptionIndex + count +
-        (direction > 0 ? 1 : count - 1)) % count;
-    RefreshResolutionOverlay();
-}
-
-void PreviousResolution(WUPSButtonCombo_ControllerTypes, WUPSButtonCombo_ComboHandle, void*)
-{
-    CycleResolution(-1);
-}
-
-void NextResolution(WUPSButtonCombo_ControllerTypes, WUPSButtonCombo_ComboHandle, void*)
-{
-    CycleResolution(1);
-}
 
 bool ApplyPendingResolution()
 {
@@ -295,23 +278,16 @@ bool ApplyPendingResolution()
 void SelectResolutionMenuEntry(WUPSButtonCombo_ControllerTypes, WUPSButtonCombo_ComboHandle, void*)
 {
     if (!gOverlayVisible) return;
-    if (gChoosingResolution)
+
+    if (gSelectedMenuEntry >= 1 && gSelectedMenuEntry <= 3)
     {
         gPendingResolution = static_cast<AVMTvResolution>(
-            kResolutionOptions[gResolutionOptionIndex].value);
-        gChoosingResolution = false;
+            kResolutionOptions[gSelectedMenuEntry - 1].value);
         RefreshResolutionOverlay();
         return;
     }
-    if (gSelectedMenuEntry == 1)
-    {
-        gChoosingResolution = true;
-        for (size_t i = 0; i < sizeof(kResolutionOptions) / sizeof(kResolutionOptions[0]); ++i)
-            if (kResolutionOptions[i].value == static_cast<uint32_t>(gPendingResolution))
-                gResolutionOptionIndex = i;
-        RefreshResolutionOverlay();
-        return;
-    }
+
+    if (gSelectedMenuEntry != 4) return;
     HideResolutionOverlay();
     gOverlayVisible = false;
     if (ApplyPendingResolution())
@@ -349,17 +325,25 @@ void OnEntryBackgroundColorChanged(size_t index, uint32_t value)
     ApplyNotificationBackgroundColors();
 }
 
-void OnResolutionEntryColorChanged(ConfigItemMultipleValues*, uint32_t value)
-{
-    OnEntryBackgroundColorChanged(1, value);
-}
-void OnApplyEntryColorChanged(ConfigItemMultipleValues*, uint32_t value)
-{
-    OnEntryBackgroundColorChanged(2, value);
-}
 void OnHeaderEntryColorChanged(ConfigItemMultipleValues*, uint32_t value)
 {
     OnEntryBackgroundColorChanged(0, value);
+}
+void On480pEntryColorChanged(ConfigItemMultipleValues*, uint32_t value)
+{
+    OnEntryBackgroundColorChanged(1, value);
+}
+void On720pEntryColorChanged(ConfigItemMultipleValues*, uint32_t value)
+{
+    OnEntryBackgroundColorChanged(2, value);
+}
+void On1080pEntryColorChanged(ConfigItemMultipleValues*, uint32_t value)
+{
+    OnEntryBackgroundColorChanged(3, value);
+}
+void OnApplyEntryColorChanged(ConfigItemMultipleValues*, uint32_t value)
+{
+    OnEntryBackgroundColorChanged(4, value);
 }
 
 void LoadBackgroundColors()
@@ -581,13 +565,23 @@ WUPSConfigAPICallbackStatus ConfigMenuOpenedCallback(WUPSConfigCategoryHandle ro
             std::span<const WUPSConfigItemMultipleValues::ValuePair>(kEntryBackgroundColorOptions),
             OnHeaderEntryColorChanged));
         root.add(WUPSConfigItemMultipleValues::CreateFromValue(
-            std::optional<const std::string>("entry_color_1"), "Resolution Background",
+            std::optional<const std::string>("entry_color_1"), "480p Background",
             kUseGlobalBackgroundColor, gEntryBackgroundColors[1],
             std::span<const WUPSConfigItemMultipleValues::ValuePair>(kEntryBackgroundColorOptions),
-            OnResolutionEntryColorChanged));
+            On480pEntryColorChanged));
         root.add(WUPSConfigItemMultipleValues::CreateFromValue(
-            std::optional<const std::string>("entry_color_2"), "Apply Background",
+            std::optional<const std::string>("entry_color_2"), "720p Background",
             kUseGlobalBackgroundColor, gEntryBackgroundColors[2],
+            std::span<const WUPSConfigItemMultipleValues::ValuePair>(kEntryBackgroundColorOptions),
+            On720pEntryColorChanged));
+        root.add(WUPSConfigItemMultipleValues::CreateFromValue(
+            std::optional<const std::string>("entry_color_3"), "1080p Background",
+            kUseGlobalBackgroundColor, gEntryBackgroundColors[3],
+            std::span<const WUPSConfigItemMultipleValues::ValuePair>(kEntryBackgroundColorOptions),
+            On1080pEntryColorChanged));
+        root.add(WUPSConfigItemMultipleValues::CreateFromValue(
+            std::optional<const std::string>("entry_color_4"), "Apply Background",
+            kUseGlobalBackgroundColor, gEntryBackgroundColors[4],
             std::span<const WUPSConfigItemMultipleValues::ValuePair>(kEntryBackgroundColorOptions),
             OnApplyEntryColorChanged));
     }
