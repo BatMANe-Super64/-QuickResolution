@@ -53,7 +53,9 @@ WUPSButtonCombo_ComboHandle gSelectCombo = {};
 NotificationModuleHandle gNotificationHandles[kMenuEntryCount] = {};
 bool gNotificationReady = false;
 bool gOverlayVisible = false;
-size_t gSelectedMenuEntry = 0;
+bool gChoosingResolution = false;
+size_t gSelectedMenuEntry = 1;
+size_t gResolutionOptionIndex = 0;
 char gOverlayStatus[96] = "NotificationModule: not initialized";
 
 constexpr WUPSConfigItemMultipleValues::ValuePair kResolutionOptions[] = {
@@ -154,11 +156,15 @@ void BuildOverlayText(size_t index, char* buffer, size_t size)
     if (index == 0)
         (void)std::snprintf(buffer, size, "Quick Resolution");
     else if (index == 1)
-        (void)std::snprintf(buffer, size, "%c Resolution: %s",
-            gSelectedMenuEntry == 1 ? '>' : ' ', ResolutionLabel(gPendingResolution));
+        (void)std::snprintf(buffer, size, "%c Resolution: %s%s",
+            gChoosingResolution || (!gChoosingResolution && gSelectedMenuEntry == 1) ? '>' : ' ',
+            ResolutionLabel(gChoosingResolution
+                ? static_cast<AVMTvResolution>(kResolutionOptions[gResolutionOptionIndex].value)
+                : gPendingResolution),
+            gChoosingResolution ? " (A: Select)" : " (A: Change)");
     else
         (void)std::snprintf(buffer, size, "%c Apply resolution (restart Menu)",
-            gSelectedMenuEntry == 2 ? '>' : ' ');
+            !gChoosingResolution && gSelectedMenuEntry == 2 ? '>' : ' ');
 }
 
 void HideResolutionOverlay()
@@ -201,6 +207,10 @@ void RefreshResolutionOverlay()
 void ShowResolutionOverlay()
 {
     gSelectedMenuEntry = 1;
+    gChoosingResolution = false;
+    for (size_t i = 0; i < sizeof(kResolutionOptions) / sizeof(kResolutionOptions[0]); ++i)
+        if (kResolutionOptions[i].value == static_cast<uint32_t>(gPendingResolution))
+            gResolutionOptionIndex = i;
     if (!gNotificationReady)
     {
         (void)std::snprintf(gOverlayStatus, sizeof(gOverlayStatus),
@@ -235,8 +245,16 @@ void ToggleResolutionOverlay(WUPSButtonCombo_ControllerTypes, WUPSButtonCombo_Co
 void MoveResolutionMenu(int direction)
 {
     if (!gOverlayVisible) return;
-    gSelectedMenuEntry = (gSelectedMenuEntry == 1) ? 2 : 1;
-    (void)direction;
+    if (gChoosingResolution)
+    {
+        const size_t count = sizeof(kResolutionOptions) / sizeof(kResolutionOptions[0]);
+        gResolutionOptionIndex = (gResolutionOptionIndex + count +
+            (direction > 0 ? 1 : count - 1)) % count;
+    }
+    else
+    {
+        gSelectedMenuEntry = (gSelectedMenuEntry == 1) ? 2 : 1;
+    }
     RefreshResolutionOverlay();
 }
 
@@ -252,14 +270,10 @@ void NextMenuEntry(WUPSButtonCombo_ControllerTypes, WUPSButtonCombo_ComboHandle,
 
 void CycleResolution(int direction)
 {
-    if (!gOverlayVisible || gSelectedMenuEntry != 1) return;
-    size_t current = 0;
-    for (size_t i = 0; i < sizeof(kResolutionOptions) / sizeof(kResolutionOptions[0]); ++i)
-        if (kResolutionOptions[i].value == static_cast<uint32_t>(gPendingResolution)) current = i;
-    current = (current + sizeof(kResolutionOptions) / sizeof(kResolutionOptions[0]) +
-        (direction > 0 ? 1 : static_cast<int>(sizeof(kResolutionOptions) / sizeof(kResolutionOptions[0])) - 1)) %
-        (sizeof(kResolutionOptions) / sizeof(kResolutionOptions[0]));
-    gPendingResolution = static_cast<AVMTvResolution>(kResolutionOptions[current].value);
+    if (!gOverlayVisible || !gChoosingResolution) return;
+    const size_t count = sizeof(kResolutionOptions) / sizeof(kResolutionOptions[0]);
+    gResolutionOptionIndex = (gResolutionOptionIndex + count +
+        (direction > 0 ? 1 : count - 1)) % count;
     RefreshResolutionOverlay();
 }
 
@@ -281,7 +295,23 @@ bool ApplyPendingResolution()
 void SelectResolutionMenuEntry(WUPSButtonCombo_ControllerTypes, WUPSButtonCombo_ComboHandle, void*)
 {
     if (!gOverlayVisible) return;
-    if (gSelectedMenuEntry != 2) return;
+    if (gChoosingResolution)
+    {
+        gPendingResolution = static_cast<AVMTvResolution>(
+            kResolutionOptions[gResolutionOptionIndex].value);
+        gChoosingResolution = false;
+        RefreshResolutionOverlay();
+        return;
+    }
+    if (gSelectedMenuEntry == 1)
+    {
+        gChoosingResolution = true;
+        for (size_t i = 0; i < sizeof(kResolutionOptions) / sizeof(kResolutionOptions[0]); ++i)
+            if (kResolutionOptions[i].value == static_cast<uint32_t>(gPendingResolution))
+                gResolutionOptionIndex = i;
+        RefreshResolutionOverlay();
+        return;
+    }
     HideResolutionOverlay();
     gOverlayVisible = false;
     if (ApplyPendingResolution())
@@ -538,7 +568,7 @@ WUPSConfigAPICallbackStatus ConfigMenuOpenedCallback(WUPSConfigCategoryHandle ro
             "APPLY NOW",
             "Not applying"));
 
-        root.add(WUPSConfigItemStub::Create("Overlay controls: TV + ZL toggle; TV + Up/Down select; TV + Left/Right change resolution; TV + A apply when Apply is selected"));
+        root.add(WUPSConfigItemStub::Create("Overlay controls: TV + ZL toggle; TV + Up/Down navigate; TV + A select/change setting"));
         root.add(WUPSConfigItemMultipleValues::CreateFromValue(
             std::optional<const std::string>(kBackgroundColorStorageId),
             "Background Color", kDefaultBackgroundColor, gBackgroundColorSelection,
@@ -630,14 +660,6 @@ INITIALIZE_PLUGIN()
         static_cast<WUPSButtonCombo_Buttons>(WUPS_BUTTON_COMBO_BUTTON_TV | WUPS_BUTTON_COMBO_BUTTON_DOWN),
         NextMenuEntry, nullptr, &gNextCombo, &comboStatus);
     (void)WUPSButtonComboAPI_AddButtonComboPressDown(
-        "QuickResolution previous resolution (TV + Left)",
-        static_cast<WUPSButtonCombo_Buttons>(WUPS_BUTTON_COMBO_BUTTON_TV | WUPS_BUTTON_COMBO_BUTTON_LEFT),
-        PreviousResolution, nullptr, &gCyclePreviousCombo, &comboStatus);
-    (void)WUPSButtonComboAPI_AddButtonComboPressDown(
-        "QuickResolution next resolution (TV + Right)",
-        static_cast<WUPSButtonCombo_Buttons>(WUPS_BUTTON_COMBO_BUTTON_TV | WUPS_BUTTON_COMBO_BUTTON_RIGHT),
-        NextResolution, nullptr, &gCycleNextCombo, &comboStatus);
-    (void)WUPSButtonComboAPI_AddButtonComboPressDown(
         "QuickResolution select/apply (TV + A)",
         static_cast<WUPSButtonCombo_Buttons>(WUPS_BUTTON_COMBO_BUTTON_TV | WUPS_BUTTON_COMBO_BUTTON_A),
         SelectResolutionMenuEntry, nullptr, &gSelectCombo, &comboStatus);
@@ -656,7 +678,7 @@ DEINITIALIZE_PLUGIN()
     }
     WUPSButtonCombo_ComboHandle* handles[] = {
         &gToggleCombo, &gPreviousCombo, &gNextCombo,
-        &gCyclePreviousCombo, &gCycleNextCombo, &gSelectCombo
+        &gSelectCombo
     };
     for (auto* handle : handles)
     {
