@@ -4,9 +4,7 @@ A WUPS plugin for Aroma that provides a configuration-menu option for selecting 
 
 ## Requirements
 
-- Aroma
-- [WiiUPluginLoaderBackend](https://github.com/wiiu-env/WiiUPluginLoaderBackend)
-- The WUPS and WUT development libraries supplied by the Wii U plugin toolchain
+- A Wiiu console running the aroma homebrew environment.
 
 ## Build
 
