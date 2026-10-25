@@ -6,6 +6,7 @@
 #include <wups/config/WUPSConfigItemMultipleValues.h>
 #include <wups/config_api.h>
 #include <sysapp/launch.h>
+#include <coreinit/title.h>
 
 #include <optional>
 #include <span>
@@ -13,7 +14,7 @@
 
 WUPS_PLUGIN_NAME("Quick Resolution");
 WUPS_PLUGIN_DESCRIPTION("Quickly change Wii U display resolution");
-WUPS_PLUGIN_VERSION("1.0");
+WUPS_PLUGIN_VERSION("1.1-experimental");
 WUPS_PLUGIN_AUTHOR("Super64");
 WUPS_PLUGIN_LICENSE("GPL-3.0");
 
@@ -80,6 +81,33 @@ void OnApplyToggled(ConfigItemBoolean* item, bool value)
     }
 }
 
+void OnApplyAndRelaunchToggled(ConfigItemBoolean* item, bool value)
+{
+    (void)item;
+    if (!value)
+    {
+        return;
+    }
+
+    // Capture the currently executing title before requesting a transition.
+    const uint64_t titleId = OSGetTitleID();
+    if (!SetResolution(static_cast<uint32_t>(gPendingResolution)))
+    {
+        return;
+    }
+
+    // Experimental: verify on hardware that relaunch applies the new mode.
+    // If title detection fails, preserve the known-good Menu fallback.
+    if (titleId != 0)
+    {
+        SYSLaunchTitle(titleId);
+    }
+    else
+    {
+        SYSLaunchMenu();
+    }
+}
+
 WUPSConfigAPICallbackStatus ConfigMenuOpenedCallback(WUPSConfigCategoryHandle rootHandle)
 {
     WUPSConfigCategory root(rootHandle);
@@ -99,6 +127,13 @@ WUPSConfigAPICallbackStatus ConfigMenuOpenedCallback(WUPSConfigCategoryHandle ro
             false,
             false,
             OnApplyToggled));
+
+        root.add(WUPSConfigItemBoolean::Create(
+            std::optional<const std::string>("apply_relaunch"),
+            "EXPERIMENT: Save first; Apply & Relaunch Game",
+            false,
+            false,
+            OnApplyAndRelaunchToggled));
     }
     catch (...)
     {
