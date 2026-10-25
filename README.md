@@ -20,10 +20,9 @@ QuickResolution   █████████                       18 s
 
 **41 seconds saved · 69.5% less time · 3.28× faster**
 
-These are user-measured times on real Wii U hardware. The 59-second System Settings measurement **does not include the time needed to launch System Settings**, so the full conventional workflow can take longer. Results may vary by setup and scenario.
+These are user-measured times on real Wii U hardware. The 59-second System Settings measurement **does not include the extra 10 seconds needed to open System Settings**
 
 ## Features
-
 - **480p / 720p / 1080p** resolution choices.
 - **Restart the game you were already playing** after applying the new resolution — no need to manually find and launch it again.
 - **Wii U Menu-aware:** applying from the Menu restarts the Menu in the selected resolution.
