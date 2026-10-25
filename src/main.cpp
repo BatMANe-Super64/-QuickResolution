@@ -130,7 +130,7 @@ WUPSConfigAPICallbackStatus ConfigMenuOpenedCallback(WUPSConfigCategoryHandle ro
 
         root.add(WUPSConfigItemBoolean::Create(
             std::optional<const std::string>("apply_relaunch"),
-            "EXPERIMENT: Save first; Apply & Relaunch Game",
+            "Apply Resolution & Restart Game",
             false,
             false,
             OnApplyAndRelaunchToggled));
