@@ -4,8 +4,10 @@
 #include <wups/config/WUPSConfigCategory.h>
 #include <wups/config/WUPSConfigItemBoolean.h>
 #include <wups/config/WUPSConfigItemMultipleValues.h>
+#include <wups/config/WUPSConfigItemStub.h>
 #include <wups/config_api.h>
 #include <sysapp/launch.h>
+#include <coreinit/title.h>
 
 #include <optional>
 #include <span>
@@ -13,7 +15,7 @@
 
 WUPS_PLUGIN_NAME("Quick Resolution");
 WUPS_PLUGIN_DESCRIPTION("Quickly change Wii U display resolution");
-WUPS_PLUGIN_VERSION("1.0");
+WUPS_PLUGIN_VERSION("1.1-experimental");
 WUPS_PLUGIN_AUTHOR("Super64");
 WUPS_PLUGIN_LICENSE("GPL-3.0");
 
@@ -69,13 +71,29 @@ void OnResolutionChanged(ConfigItemMultipleValues* item, uint32_t newValue)
     }
 }
 
-void OnApplyToggled(ConfigItemBoolean* item, bool value)
+void OnApplyAndRelaunchToggled(ConfigItemBoolean* item, bool value)
 {
     (void)item;
-    if (value && SetResolution(static_cast<uint32_t>(gPendingResolution)))
+    if (!value)
     {
-        // Restarting the System Menu while a game is running can interrupt it
-        // and cause loss of unsaved progress. The config label warns users.
+        return;
+    }
+
+    // Capture the currently executing title before requesting a transition.
+    const uint64_t titleId = OSGetTitleID();
+    if (!SetResolution(static_cast<uint32_t>(gPendingResolution)))
+    {
+        return;
+    }
+
+    // Experimental: verify on hardware that relaunch applies the new mode.
+    // If title detection fails, preserve the known-good Menu fallback.
+    if (titleId != 0)
+    {
+        SYSLaunchTitle(titleId);
+    }
+    else
+    {
         SYSLaunchMenu();
     }
 }
@@ -85,6 +103,8 @@ WUPSConfigAPICallbackStatus ConfigMenuOpenedCallback(WUPSConfigCategoryHandle ro
     WUPSConfigCategory root(rootHandle);
     try
     {
+        root.add(WUPSConfigItemStub::Create("WARNING: Save game first"));
+
         root.add(WUPSConfigItemMultipleValues::CreateFromValue(
             std::optional<const std::string>("resolution"),
             "Display Resolution (staged until Apply)",
@@ -94,11 +114,11 @@ WUPSConfigAPICallbackStatus ConfigMenuOpenedCallback(WUPSConfigCategoryHandle ro
             OnResolutionChanged));
 
         root.add(WUPSConfigItemBoolean::Create(
-            std::optional<const std::string>("apply_resolution"),
-            "WARNING: Save game first; Apply restarts Menu",
+            std::optional<const std::string>("apply_relaunch"),
+            "Apply Resolution & Restart Game",
             false,
             false,
-            OnApplyToggled));
+            OnApplyAndRelaunchToggled));
     }
     catch (...)
     {
