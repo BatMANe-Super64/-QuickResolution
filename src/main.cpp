@@ -4,6 +4,7 @@
 #include <wups/config/WUPSConfigCategory.h>
 #include <wups/config/WUPSConfigItemBoolean.h>
 #include <wups/config/WUPSConfigItemMultipleValues.h>
+#include <wups/config/WUPSConfigItemStub.h>
 #include <wups/config_api.h>
 #include <sysapp/launch.h>
 #include <coreinit/title.h>
@@ -102,6 +103,8 @@ WUPSConfigAPICallbackStatus ConfigMenuOpenedCallback(WUPSConfigCategoryHandle ro
     WUPSConfigCategory root(rootHandle);
     try
     {
+        root.add(WUPSConfigItemStub::Create("WARNING: Save game first"));
+
         root.add(WUPSConfigItemMultipleValues::CreateFromValue(
             std::optional<const std::string>("resolution"),
             "Display Resolution (staged until Apply)",
