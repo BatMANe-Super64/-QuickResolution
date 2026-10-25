@@ -70,17 +70,6 @@ void OnResolutionChanged(ConfigItemMultipleValues* item, uint32_t newValue)
     }
 }
 
-void OnApplyToggled(ConfigItemBoolean* item, bool value)
-{
-    (void)item;
-    if (value && SetResolution(static_cast<uint32_t>(gPendingResolution)))
-    {
-        // Restarting the System Menu while a game is running can interrupt it
-        // and cause loss of unsaved progress. The config label warns users.
-        SYSLaunchMenu();
-    }
-}
-
 void OnApplyAndRelaunchToggled(ConfigItemBoolean* item, bool value)
 {
     (void)item;
@@ -120,13 +109,6 @@ WUPSConfigAPICallbackStatus ConfigMenuOpenedCallback(WUPSConfigCategoryHandle ro
             static_cast<uint32_t>(gPendingResolution),
             std::span<const WUPSConfigItemMultipleValues::ValuePair>(kResolutionOptions),
             OnResolutionChanged));
-
-        root.add(WUPSConfigItemBoolean::Create(
-            std::optional<const std::string>("apply_resolution"),
-            "WARNING: Save game first; Apply restarts Menu",
-            false,
-            false,
-            OnApplyToggled));
 
         root.add(WUPSConfigItemBoolean::Create(
             std::optional<const std::string>("apply_relaunch"),
