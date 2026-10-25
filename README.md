@@ -72,4 +72,4 @@ Licensed under GNU GPL v3.0. See [LICENSE](LICENSE).
 
 ---
 
-Made by **Super64** for the Wii U homebrew community.
+Made by **Super64**
