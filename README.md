@@ -5,7 +5,7 @@
 QuickResolution is an [Aroma](https://github.com/wiiu-env/Aroma) / WUPS plugin for switching between **480p, 720p, and 1080p resolutions on the fly** without navigating through Wii U System Settings. Choose a resolution, apply it, and QuickResolution **relaunches the currently running game** in the selected mode. When used from the Wii U Menu, it relaunches the Menu instead.
 
 
-[## ⬇️ Download the latest release](https://github.com/BatMANe-Super64/-QuickResolution/releases/latest)
+[**Download the latest release**](https://github.com/BatMANe-Super64/-QuickResolution/releases/latest) · [Installation instructions](#install) · [Release history](https://github.com/BatMANe-Super64/-QuickResolution/releases)
 
 ## ⚡ Real Wii U hardware benchmark
 
