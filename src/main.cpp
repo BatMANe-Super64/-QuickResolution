@@ -15,7 +15,7 @@
 
 WUPS_PLUGIN_NAME("Quick Resolution");
 WUPS_PLUGIN_DESCRIPTION("Quickly change Wii U display resolution");
-WUPS_PLUGIN_VERSION("1.1-experimental");
+WUPS_PLUGIN_VERSION("v1.1.0");
 WUPS_PLUGIN_AUTHOR("Super64");
 WUPS_PLUGIN_LICENSE("GPL-3.0");
 
@@ -86,7 +86,7 @@ void OnApplyAndRelaunchToggled(ConfigItemBoolean* item, bool value)
         return;
     }
 
-    // Experimental: verify on hardware that relaunch applies the new mode.
+    // Relaunch the current title to apply the selected video mode.
     // If title detection fails, preserve the known-good Menu fallback.
     if (titleId != 0)
     {
