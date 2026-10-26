@@ -2,7 +2,7 @@
 
 **Change your Wii U display resolution in seconds — and jump straight back into the game you were playing.**
 
-QuickResolution is an [Aroma](https://github.com/wiiu-env/Aroma) / plugin for switching between **480p, 720p, and 1080p resolutions on the fly** without navigating through Wii U System Settings. Choose a resolution, apply it, and QuickResolution **relaunches the currently running game** in the selected mode. When used from the Wii U Menu, it relaunches the Menu instead.
+QuickResolution is an [Aroma](https://github.com/wiiu-env/Aroma) / WUPS plugin for switching between **480p, 720p, and 1080p resolutions on the fly** without navigating through Wii U System Settings. Choose a resolution, apply it, and QuickResolution **relaunches the currently running game** in the selected mode. When used from the Wii U Menu, it relaunches the Menu instead.
 
 ## ⚡ Real Wii U hardware benchmark
 
@@ -20,7 +20,7 @@ QuickResolution   █████████                       18 s
 
 **41 seconds saved · 69.5% less time · 3.28× faster**
 
-These are user-measured times on real Wii U hardware. The 59-second System Settings measurement **does not include the extra 10 seconds needed to open System Settings**
+These are user-measured times on real Wii U hardware. The 59-second System Settings measurement **does not include the extra 10 seconds needed to open System Settings**.
 
 ## Features
 - **480p / 720p / 1080p** resolution choices.
@@ -35,15 +35,13 @@ These are user-measured times on real Wii U hardware. The 59-second System Setti
 
 ## Install
 
-Download the `QuickResolution-Plugin` artifact from [GitHub Actions](https://github.com/BatMANe-Super64/-QuickResolution/actions/workflows/build.yml), extract the `.wps` file, and copy it to:
+Download **[QuickResolution.wps](https://github.com/BatMANe-Super64/-QuickResolution/releases/latest)** from the latest GitHub release and copy it to:
 
 ```text
 sd:/wiiu/environments/[ENVIRONMENT]/plugins/
 ```
 
 Replace `[ENVIRONMENT]` with your Aroma environment name. Restart the environment or reload the plugin as appropriate.
-
-> **Experimental game-relaunch functionality** is currently on the `experiment/relaunch-current-title` branch. Use an artifact built from that branch to test it.
 
 ## Usage
 
