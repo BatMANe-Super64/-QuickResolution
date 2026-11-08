@@ -43,7 +43,8 @@ bool IsSupportedResolution(uint32_t value)
     return false;
 }
 
-// A zero return value from WUT's AVM API indicates success.
+// Apply the live TV mode first. Only persist the selection after AVM reports
+// that the requested scan mode is active. Preserve the fast title relaunch.
 bool SetResolution(uint32_t value)
 {
     if (!IsSupportedResolution(value))
@@ -52,15 +53,37 @@ bool SetResolution(uint32_t value)
     }
 
     const auto resolution = static_cast<AVMTvResolution>(value);
-    if (AVMWriteSystemVideoResConfig(resolution) != 0)
+    AVMTvResolution previousConfigured = kDefaultResolution;
+    if (AVMReadSystemVideoResConfig(&previousConfigured) != 0)
     {
         return false;
     }
 
-    // Experimental: writing the system setting does not change the live signal.
-    // Apply the active TV scan resolution before the existing fast relaunch.
+    AVMTvResolution previousLive = kDefaultResolution;
+    if (!AVMGetTVScanMode(&previousLive) ||
+        !IsSupportedResolution(static_cast<uint32_t>(previousLive)))
+    {
+        return false;
+    }
+
+    // Do not write the persistent setting or relaunch if live application fails.
     if (AVMSetTVScanResolution(resolution) != 0)
     {
+        return false;
+    }
+
+    AVMTvResolution appliedLive = kDefaultResolution;
+    if (!AVMGetTVScanMode(&appliedLive) || appliedLive != resolution)
+    {
+        (void)AVMSetTVScanResolution(previousLive);
+        return false;
+    }
+
+    if (AVMWriteSystemVideoResConfig(resolution) != 0)
+    {
+        // Best-effort restoration if the persistent write fails.
+        (void)AVMSetTVScanResolution(previousLive);
+        (void)AVMWriteSystemVideoResConfig(previousConfigured);
         return false;
     }
 
