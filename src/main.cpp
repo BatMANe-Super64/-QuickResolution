@@ -24,6 +24,8 @@ namespace
 constexpr AVMTvResolution kDefaultResolution = AVM_TV_RESOLUTION_720P;
 AVMTvResolution gCurrentResolution = kDefaultResolution;
 AVMTvResolution gPendingResolution = kDefaultResolution;
+bool gApplyOnMenuClose = false;
+uint64_t gRelaunchTitleId = 0;
 
 constexpr WUPSConfigItemMultipleValues::ValuePair kResolutionOptions[] = {
     {AVM_TV_RESOLUTION_480P, "480p"},
@@ -43,7 +45,7 @@ bool IsSupportedResolution(uint32_t value)
     return false;
 }
 
-// A zero return value from WUT's AVM API indicates success.
+// Apply the live TV mode, then persist the setting and use the original relaunch.
 bool SetResolution(uint32_t value)
 {
     if (!IsSupportedResolution(value))
@@ -52,6 +54,11 @@ bool SetResolution(uint32_t value)
     }
 
     const auto resolution = static_cast<AVMTvResolution>(value);
+    if (AVMSetTVScanResolution(resolution) != 0)
+    {
+        return false;
+    }
+
     if (AVMWriteSystemVideoResConfig(resolution) != 0)
     {
         return false;
@@ -79,23 +86,10 @@ void OnApplyAndRelaunchToggled(ConfigItemBoolean* item, bool value)
         return;
     }
 
-    // Capture the currently executing title before requesting a transition.
-    const uint64_t titleId = OSGetTitleID();
-    if (!SetResolution(static_cast<uint32_t>(gPendingResolution)))
-    {
-        return;
-    }
-
-    // Relaunch the current title to apply the selected video mode.
-    // If title detection fails, preserve the known-good Menu fallback.
-    if (titleId != 0)
-    {
-        SYSLaunchTitle(titleId);
-    }
-    else
-    {
-        SYSLaunchMenu();
-    }
+    // Stage the request only. Let Aroma close and save its configuration
+    // before changing the live output or requesting a title relaunch.
+    gRelaunchTitleId = OSGetTitleID();
+    gApplyOnMenuClose = true;
 }
 
 WUPSConfigAPICallbackStatus ConfigMenuOpenedCallback(WUPSConfigCategoryHandle rootHandle)
@@ -104,6 +98,7 @@ WUPSConfigAPICallbackStatus ConfigMenuOpenedCallback(WUPSConfigCategoryHandle ro
     try
     {
         root.add(WUPSConfigItemStub::Create("WARNING: Save game first"));
+        root.add(WUPSConfigItemStub::Create("After Apply, close Aroma menu to restart"));
 
         root.add(WUPSConfigItemMultipleValues::CreateFromValue(
             std::optional<const std::string>("resolution"),
@@ -129,6 +124,29 @@ WUPSConfigAPICallbackStatus ConfigMenuOpenedCallback(WUPSConfigCategoryHandle ro
 
 void ConfigMenuClosedCallback()
 {
+    if (!gApplyOnMenuClose)
+    {
+        return;
+    }
+
+    // One-shot: never repeat the launch on a subsequent menu close.
+    gApplyOnMenuClose = false;
+    const uint64_t titleId = gRelaunchTitleId;
+    gRelaunchTitleId = 0;
+
+    if (!SetResolution(static_cast<uint32_t>(gPendingResolution)))
+    {
+        return;
+    }
+
+    if (titleId != 0)
+    {
+        SYSLaunchTitle(titleId);
+    }
+    else
+    {
+        SYSLaunchMenu();
+    }
 }
 } // namespace
 
