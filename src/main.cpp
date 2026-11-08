@@ -43,8 +43,7 @@ bool IsSupportedResolution(uint32_t value)
     return false;
 }
 
-// Apply the live TV mode first. Only persist the selection after AVM reports
-// that the requested scan mode is active. Preserve the fast title relaunch.
+// Apply the live TV mode, then persist the setting and use the original relaunch.
 bool SetResolution(uint32_t value)
 {
     if (!IsSupportedResolution(value))
@@ -53,37 +52,13 @@ bool SetResolution(uint32_t value)
     }
 
     const auto resolution = static_cast<AVMTvResolution>(value);
-    AVMTvResolution previousConfigured = kDefaultResolution;
-    if (AVMReadSystemVideoResConfig(&previousConfigured) != 0)
-    {
-        return false;
-    }
-
-    AVMTvResolution previousLive = kDefaultResolution;
-    if (!AVMGetTVScanMode(&previousLive) ||
-        !IsSupportedResolution(static_cast<uint32_t>(previousLive)))
-    {
-        return false;
-    }
-
-    // Do not write the persistent setting or relaunch if live application fails.
     if (AVMSetTVScanResolution(resolution) != 0)
     {
         return false;
     }
 
-    AVMTvResolution appliedLive = kDefaultResolution;
-    if (!AVMGetTVScanMode(&appliedLive) || appliedLive != resolution)
-    {
-        (void)AVMSetTVScanResolution(previousLive);
-        return false;
-    }
-
     if (AVMWriteSystemVideoResConfig(resolution) != 0)
     {
-        // Best-effort restoration if the persistent write fails.
-        (void)AVMSetTVScanResolution(previousLive);
-        (void)AVMWriteSystemVideoResConfig(previousConfigured);
         return false;
     }
 
