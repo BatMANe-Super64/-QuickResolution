@@ -57,6 +57,13 @@ bool SetResolution(uint32_t value)
         return false;
     }
 
+    // Experimental: writing the system setting does not change the live signal.
+    // Apply the active TV scan resolution before the existing fast relaunch.
+    if (AVMSetTVScanResolution(resolution) != 0)
+    {
+        return false;
+    }
+
     gCurrentResolution = resolution;
     return true;
 }
