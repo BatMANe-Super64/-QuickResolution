@@ -15,7 +15,7 @@
 
 WUPS_PLUGIN_NAME("Quick Resolution");
 WUPS_PLUGIN_DESCRIPTION("Quickly change Wii U display resolution");
-WUPS_PLUGIN_VERSION("v1.1.0");
+WUPS_PLUGIN_VERSION("v1.2.0");
 WUPS_PLUGIN_AUTHOR("Super64");
 WUPS_PLUGIN_LICENSE("GPL-3.0");
 
