@@ -30,7 +30,7 @@ uint64_t gRelaunchTitleId = 0;
 constexpr WUPSConfigItemMultipleValues::ValuePair kResolutionOptions[] = {
     {AVM_TV_RESOLUTION_480P, "480p"},
     {AVM_TV_RESOLUTION_720P, "720p"},
-    {AVM_TV_RESOLUTION_1080I, "1080i"},
+    {AVM_TV_RESOLUTION_1080I, "1080i (Experimental)"},
     {AVM_TV_RESOLUTION_1080P, "1080p"},
 };
 
